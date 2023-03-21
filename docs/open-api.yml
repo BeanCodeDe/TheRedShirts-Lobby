@@ -1,0 +1,244 @@
+openapi: "3.0.3"
+info:
+  title: TheRedShirts-Lobby Api 
+  version: 1.0.0
+servers:
+  - url: http://localhost:1203
+
+paths:
+  /ping:
+    get:
+      tags:
+        - Server
+      summary: Ping server to check if it is online
+      parameters:
+        - in: header
+          name: X-Correlation-ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: |-
+            Empty response
+  /lobby:
+    post:
+      tags:
+        - Create lobby
+      summary: Create ID of lobby
+      parameters:
+        - in: header
+          name: X-Correlation-ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '201':
+          description: |-
+            Response with UUID for the lobby
+          content:
+            text/plain:
+              schema:
+                type: string
+                format: UUID
+                example: f455dea9-f8f2-42e6-bead-e97a3c329d8a
+    get:
+      tags:
+        - Get lobbies
+      summary: Get all open lobbies
+      parameters:
+        - in: header
+          name: X-Correlation-ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: |-
+            Response with list of lobbies
+          content:
+            application/json:
+              type: array
+              items:
+                $ref: '#/components/schemas/Lobby'
+  /lobby/{lobbyId}:
+    get:
+      tags:
+        - Get lobbies
+      summary: Get specific lobby
+      parameters:
+        - name: lobbyId
+          in: path
+          description: Lobby ID
+          required: true
+          schema:
+            type: string
+            format: UUID
+        - in: header
+          name: X-Correlation-ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: |-
+            Response with lobby
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lobby'
+    put:
+      tags:
+        - Create lobby
+      summary: Create lobby
+      parameters:
+        - name: lobbyId
+          in: path
+          description: Lobby ID
+          required: true
+          schema:
+            type: string
+            format: UUID
+        - in: header
+          name: X-Correlation-ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        description: Body with parameters to create lobby
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLobby'
+      responses:
+        '200':
+          description: |-
+            Empty response
+    patch:
+      tags:
+        - Create lobby
+      summary: Update lobby settings
+      parameters:
+        - name: lobbyId
+          in: path
+          description: Lobby ID
+          required: true
+          schema:
+            type: string
+            format: UUID
+        - in: header
+          name: X-Correlation-ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        description: Body with parameters to create lobby
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLobby'
+      responses:
+        '200':
+          description: |-
+            Empty response
+  /lobby/{lobbyId}/{playerId}:
+    put:
+      tags:
+        - Join / Leave lobby
+      summary: Join specific lobby
+      parameters:
+        - name: lobbyId
+          in: path
+          description: Lobby ID
+          required: true
+          schema:
+            type: string
+            format: UUID
+        - name: playerId
+          in: path
+          description: Player ID
+          required: true
+          schema:
+            type: string
+            format: UUID
+        - in: header
+          name: X-Correlation-ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        description: Body with password to join lobby
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JoinLobby'
+      responses:
+        '200':
+          description: |-
+            Empty response
+    delete:
+      tags:
+        - Join / Leave lobby
+      summary: Leave specific lobby
+      parameters:
+        - name: lobbyId
+          in: path
+          description: Lobby ID
+          required: true
+          schema:
+            type: string
+            format: UUID
+        - name: playerId
+          in: path
+          description: Player ID
+          required: true
+          schema:
+            type: string
+            format: UUID
+        - in: header
+          name: X-Correlation-ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: |-
+            Empty response
+components:
+  schemas:
+    JoinLobby:
+      type: object
+      properties:
+        password:
+          type: string
+    CreateLobby:
+      type: object
+      properties:
+        name:
+          type: string
+        password:
+          type: string
+        difficulty:
+          type: string
+    Lobby:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        difficulty:
+          type: string
+        players:
+          type: array
+          items:
+            $ref: '#/components/schemas/Player'
+    Player:
+      type: object
+      properties:
+        name:
+          type: string
