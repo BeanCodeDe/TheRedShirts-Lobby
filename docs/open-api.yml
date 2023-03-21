@@ -18,7 +18,7 @@ paths:
             type: string
             format: uuid
       responses:
-        '200':
+        '204':
           description: |-
             Empty response
   /lobby:
@@ -58,9 +58,10 @@ paths:
             Response with list of lobbies
           content:
             application/json:
-              type: array
-              items:
-                $ref: '#/components/schemas/Lobby'
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Lobby'
   /lobby/{lobbyId}:
     get:
       tags:
@@ -112,7 +113,7 @@ paths:
             schema:
               $ref: '#/components/schemas/CreateLobby'
       responses:
-        '200':
+        '201':
           description: |-
             Empty response
     patch:
@@ -140,7 +141,7 @@ paths:
             schema:
               $ref: '#/components/schemas/CreateLobby'
       responses:
-        '200':
+        '204':
           description: |-
             Empty response
   /lobby/{lobbyId}/{playerId}:
@@ -176,7 +177,7 @@ paths:
             schema:
               $ref: '#/components/schemas/JoinLobby'
       responses:
-        '200':
+        '201':
           description: |-
             Empty response
     delete:
@@ -204,7 +205,7 @@ paths:
             type: string
             format: uuid
       responses:
-        '200':
+        '204':
           description: |-
             Empty response
 components:
