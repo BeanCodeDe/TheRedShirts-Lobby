@@ -56,6 +56,9 @@ func mapToLobby(lobby *db.Lobby, owner *Player, players []*Player) *Lobby {
 }
 
 func mapToPlayer(player *db.Player) *Player {
+	if player == nil {
+		return nil
+	}
 	return &Player{ID: player.ID, Name: player.Name}
 }
 

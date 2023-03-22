@@ -50,6 +50,9 @@ func (db *postgresConnection) GetPlayerById(id uuid.UUID) (*Player, error) {
 	if err := pgxscan.Select(context.Background(), db.dbPool, &players, fmt.Sprintf(select_player_by_player_id_sql, schema_name, player_table_name), id); err != nil {
 		return nil, fmt.Errorf("error while selecting player with id %v: %v", id, err)
 	}
+	if len(players) == 0 {
+		return nil, nil
+	}
 
 	if len(players) != 1 {
 		return nil, fmt.Errorf("cant find only one player. Players: %v", players)

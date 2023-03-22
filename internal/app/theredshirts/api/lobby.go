@@ -16,16 +16,16 @@ const player_id_param = "playerId"
 
 type (
 	LobbyCreate struct {
-		Name       string
-		Owner      uuid.UUID
+		Name       string  `validate:"required"`
+		Owner      *Player `validate:"required"`
 		Password   string
-		Difficulty string
+		Difficulty string `validate:"required"`
 	}
 
 	LobbyUpdate struct {
-		Name       string
+		Name       string `validate:"required"`
 		Password   string
-		Difficulty string
+		Difficulty string `validate:"required"`
 	}
 
 	Lobby struct {
@@ -38,8 +38,8 @@ type (
 	}
 
 	Player struct {
-		ID   uuid.UUID
-		Name string
+		ID   uuid.UUID `validate:"required"`
+		Name string    `validate:"required"`
 	}
 )
 
@@ -111,13 +111,11 @@ func (api *EchoApi) getLobby(context echo.Context) error {
 	}
 
 	lobby, err := api.core.GetLobby(lobbyId)
-
 	if err != nil {
 		log.Warnf("Error while loading lobby: %v", err)
 		return echo.ErrInternalServerError
 	}
-
-	return context.JSON(http.StatusOK, lobby)
+	return context.JSON(http.StatusOK, mapToLobby(lobby))
 }
 
 func (api *EchoApi) joinLobby(context echo.Context) error {
@@ -128,7 +126,7 @@ func (api *EchoApi) joinLobby(context echo.Context) error {
 
 func (api *EchoApi) leaveLobby(context echo.Context) error {
 	logger := context.Get(logger_key).(*log.Entry)
-	logger.Debug("LEave lobby")
+	logger.Debug("Leave lobby")
 	return context.String(http.StatusCreated, uuid.NewString())
 }
 
@@ -164,7 +162,7 @@ func getPlayerId(context echo.Context) (uuid.UUID, error) {
 }
 
 func mapLobbyCreateToCoreLobby(lobby *LobbyCreate, lobbyId uuid.UUID) *core.Lobby {
-	return &core.Lobby{ID: lobbyId, Name: lobby.Name, Owner: &core.Player{ID: lobby.Owner}, Password: lobby.Password, Difficulty: lobby.Difficulty}
+	return &core.Lobby{ID: lobbyId, Name: lobby.Name, Owner: mapToCorePlayer(lobby.Owner), Password: lobby.Password, Difficulty: lobby.Difficulty}
 }
 
 func mapLobbyUpdateToCoreLobby(lobby *LobbyUpdate, lobbyId uuid.UUID) *core.Lobby {
@@ -184,5 +182,15 @@ func mapToPlayers(corePlayers []*core.Player) []*Player {
 }
 
 func mapToPlayer(player *core.Player) *Player {
+	if player == nil {
+		return nil
+	}
 	return &Player{ID: player.ID, Name: player.Name}
+}
+
+func mapToCorePlayer(player *Player) *core.Player {
+	if player == nil {
+		return nil
+	}
+	return &core.Player{ID: player.ID, Name: player.Name}
 }

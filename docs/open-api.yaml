@@ -242,8 +242,8 @@ components:
         name:
           type: string
         owner:
-          type: string
-          format: uuid
+          type: object
+          $ref: '#/components/schemas/Player'
         password:
           type: string
         difficulty:
@@ -265,5 +265,8 @@ components:
     Player:
       type: object
       properties:
+        id:
+          type: string
+          format: uuid
         name:
           type: string

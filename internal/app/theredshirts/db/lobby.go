@@ -59,6 +59,10 @@ func (db *postgresConnection) GetLobbyById(id uuid.UUID) (*Lobby, error) {
 		return nil, fmt.Errorf("error while selecting lobby with id %v: %v", id, err)
 	}
 
+	if len(lobbies) == 0 {
+		return nil, nil
+	}
+
 	if len(lobbies) != 1 {
 		return nil, fmt.Errorf("cant find only one lobby. Lobbies: %v", lobbies)
 	}
