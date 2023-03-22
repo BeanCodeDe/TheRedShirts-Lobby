@@ -144,6 +144,27 @@ paths:
         '204':
           description: |-
             Empty response
+    delete:
+      tags:
+        - Delete lobby
+      summary: Delete lobby
+      parameters:
+        - name: lobbyId
+          in: path
+          description: Lobby ID
+          required: true
+          schema:
+            type: string
+            format: UUID
+        - in: header
+          name: X-Correlation-ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: |-
+            Empty response
   /lobby/{lobbyId}/{playerId}:
     put:
       tags:
@@ -220,6 +241,9 @@ components:
       properties:
         name:
           type: string
+        owner:
+          type: string
+          format: uuid
         password:
           type: string
         difficulty:
