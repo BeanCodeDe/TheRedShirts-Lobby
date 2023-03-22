@@ -16,6 +16,7 @@ type (
 
 	Core interface {
 		CreateLobby(lobby *Lobby) error
+		GetLobby(lobbyId uuid.UUID) (*Lobby, error)
 	}
 
 	//Objects
@@ -56,4 +57,12 @@ func mapToLobby(lobby *db.Lobby, owner *Player, players []*Player) *Lobby {
 
 func mapToPlayer(player *db.Player) *Player {
 	return &Player{ID: player.ID, Name: player.Name}
+}
+
+func mapToPlayers(dbPlayers []*db.Player) []*Player {
+	players := make([]*Player, len(dbPlayers))
+	for index, player := range dbPlayers {
+		players[index] = mapToPlayer(player)
+	}
+	return players
 }

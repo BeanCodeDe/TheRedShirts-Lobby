@@ -165,7 +165,7 @@ paths:
         '204':
           description: |-
             Empty response
-  /lobby/{lobbyId}/{playerId}:
+  /lobby/{lobbyId}/player/{playerId}:
     put:
       tags:
         - Join / Leave lobby

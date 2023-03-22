@@ -50,8 +50,8 @@ func initLobbyInterface(group *echo.Group, api *EchoApi) {
 	group.DELETE(":"+lobby_id_param, api.deleteLobby)
 	group.GET("", api.getAllLobbies)
 	group.GET(":"+lobby_id_param, api.getLobby)
-	group.PUT(":"+lobby_id_param+"/:"+player_id_param, api.joinLobby)
-	group.DELETE(":"+lobby_id_param+"/:"+player_id_param, api.leaveLobby)
+	group.PUT(":"+lobby_id_param+"/player/:"+player_id_param, api.joinLobby)
+	group.DELETE(":"+lobby_id_param+"/player/:"+player_id_param, api.leaveLobby)
 }
 
 func (api *EchoApi) createLobbyId(context echo.Context) error {
@@ -67,7 +67,7 @@ func (api *EchoApi) createLobby(context echo.Context) error {
 	lobby, lobbyId, err := bindLobbyCreationDTO(context)
 
 	if err != nil {
-		log.Warnf("Error while binding lobby: %v", err)
+		logger.Warnf("Error while binding lobby: %v", err)
 		return echo.ErrBadRequest
 	}
 
@@ -75,7 +75,7 @@ func (api *EchoApi) createLobby(context echo.Context) error {
 	err = api.core.CreateLobby(coreLobby)
 
 	if err != nil {
-		log.Warnf("Error while creating lobby: %v", err)
+		logger.Warnf("Error while creating lobby: %v", err)
 		return echo.ErrInternalServerError
 	}
 
@@ -103,7 +103,21 @@ func (api *EchoApi) getAllLobbies(context echo.Context) error {
 func (api *EchoApi) getLobby(context echo.Context) error {
 	logger := context.Get(logger_key).(*log.Entry)
 	logger.Debug("Get lobby")
-	return context.String(http.StatusCreated, uuid.NewString())
+
+	lobbyId, err := getLobbyId(context)
+	if err != nil {
+		logger.Warnf("Error while binding lobby id: %v", err)
+		return echo.ErrBadRequest
+	}
+
+	lobby, err := api.core.GetLobby(lobbyId)
+
+	if err != nil {
+		log.Warnf("Error while loading lobby: %v", err)
+		return echo.ErrInternalServerError
+	}
+
+	return context.JSON(http.StatusOK, lobby)
 }
 
 func (api *EchoApi) joinLobby(context echo.Context) error {
