@@ -6,8 +6,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-//const rootPath = "/spacelight"
-
 func main() {
 	setLogLevel(config.LogLevel)
 	log.Info("Start Server")

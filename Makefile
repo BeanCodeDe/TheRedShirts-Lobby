@@ -1,5 +1,5 @@
-SRC_PATH?=./cmd/spacelight-data
-APP_NAME?=spacelight-data
+SRC_PATH?=./cmd/theredshirts-lobby
+APP_NAME?=theredshirts-lobby
 DOCKER_COMPOSE_PATH?=./deployments/docker-compose-postgres.yml
 
 init.token:
