@@ -85,19 +85,53 @@ func (api *EchoApi) createLobby(context echo.Context) error {
 func (api *EchoApi) updateLobby(context echo.Context) error {
 	logger := context.Get(logger_key).(*log.Entry)
 	logger.Debug("Update lobby")
-	return context.String(http.StatusCreated, uuid.NewString())
+
+	lobby, lobbyId, err := bindLobbyUpdateDTO(context)
+
+	if err != nil {
+		logger.Warnf("Error while binding lobby: %v", err)
+		return echo.ErrBadRequest
+	}
+
+	coreLobby := mapLobbyUpdateToCoreLobby(lobby, lobbyId)
+	err = api.core.UpdateLobby(coreLobby)
+
+	if err != nil {
+		logger.Warnf("Error while creating lobby: %v", err)
+		return echo.ErrInternalServerError
+	}
+
+	return context.NoContent(http.StatusOK)
 }
 
 func (api *EchoApi) deleteLobby(context echo.Context) error {
 	logger := context.Get(logger_key).(*log.Entry)
 	logger.Debug("Delete lobby")
-	return context.String(http.StatusCreated, uuid.NewString())
+
+	lobbyId, err := getLobbyId(context)
+	if err != nil {
+		logger.Warnf("Error while binding lobby id: %v", err)
+		return echo.ErrBadRequest
+	}
+
+	if err := api.core.DeleteLobby(lobbyId); err != nil {
+		log.Warnf("Error while loading lobby: %v", err)
+		return echo.ErrInternalServerError
+	}
+
+	return context.NoContent(http.StatusOK)
 }
 
 func (api *EchoApi) getAllLobbies(context echo.Context) error {
 	logger := context.Get(logger_key).(*log.Entry)
 	logger.Debug("Get all lobbies")
-	return context.String(http.StatusCreated, uuid.NewString())
+
+	lobbies, err := api.core.GetLobbies()
+	if err != nil {
+		log.Warnf("Error while loading lobby: %v", err)
+		return echo.ErrInternalServerError
+	}
+	return context.JSON(http.StatusOK, mapToLobbies(lobbies))
 }
 
 func (api *EchoApi) getLobby(context echo.Context) error {
@@ -145,6 +179,21 @@ func bindLobbyCreationDTO(context echo.Context) (*LobbyCreate, uuid.UUID, error)
 	return lobby, lobbyId, nil
 }
 
+func bindLobbyUpdateDTO(context echo.Context) (*LobbyUpdate, uuid.UUID, error) {
+	var lobby = new(LobbyUpdate)
+	if err := context.Bind(lobby); err != nil {
+		return nil, uuid.Nil, fmt.Errorf("could not bind lobby, %v", err)
+	}
+	if err := context.Validate(lobby); err != nil {
+		return nil, uuid.Nil, fmt.Errorf("could not validate lobby, %v", err)
+	}
+	lobbyId, err := getLobbyId(context)
+	if err != nil {
+		return nil, uuid.Nil, err
+	}
+	return lobby, lobbyId, nil
+}
+
 func getLobbyId(context echo.Context) (uuid.UUID, error) {
 	lobbyId, err := uuid.Parse(context.Param(lobby_id_param))
 	if err != nil {
@@ -171,6 +220,14 @@ func mapLobbyUpdateToCoreLobby(lobby *LobbyUpdate, lobbyId uuid.UUID) *core.Lobb
 
 func mapToLobby(lobby *core.Lobby) *Lobby {
 	return &Lobby{ID: lobby.ID, Name: lobby.Name, Owner: mapToPlayer(lobby.Owner), Password: lobby.Password, Difficulty: lobby.Difficulty, Players: mapToPlayers(lobby.Players)}
+}
+
+func mapToLobbies(coreLobbies []*core.Lobby) []*Lobby {
+	lobbies := make([]*Lobby, len(coreLobbies))
+	for index, lobby := range coreLobbies {
+		lobbies[index] = mapToLobby(lobby)
+	}
+	return lobbies
 }
 
 func mapToPlayers(corePlayers []*core.Player) []*Player {

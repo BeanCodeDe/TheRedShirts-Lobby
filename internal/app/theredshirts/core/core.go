@@ -17,6 +17,9 @@ type (
 	Core interface {
 		CreateLobby(lobby *Lobby) error
 		GetLobby(lobbyId uuid.UUID) (*Lobby, error)
+		UpdateLobby(lobby *Lobby) error
+		GetLobbies() ([]*Lobby, error)
+		DeleteLobby(lobbyId uuid.UUID) error
 	}
 
 	//Objects

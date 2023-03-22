@@ -14,7 +14,7 @@ import (
 const (
 	lobby_table_name       = "lobby"
 	create_lobby_sql       = "INSERT INTO %s.%s(id, name, owner, password, difficulty) VALUES($1, $2, $3, $4, $5)"
-	update_lobby_sql       = "UPDATE %s.%s SET name = $2, owner = $3, password = $4, difficulty = $5) WHERE id = $1"
+	update_lobby_sql       = "UPDATE %s.%s SET name = $2, password = $3, difficulty = $4 WHERE id = $1"
 	delete_lobby_sql       = "DELETE FROM %s.%s WHERE id = $1"
 	select_lobby_by_id_sql = "SELECT id, name, owner, password, difficulty FROM %s.%s WHERE id = $1"
 	select_lobby_sql       = "SELECT id, name, owner, password, difficulty FROM %s.%s"
@@ -40,7 +40,7 @@ func (db *postgresConnection) CreateLobby(lobby *Lobby) error {
 }
 
 func (db *postgresConnection) UpdateLobby(lobby *Lobby) error {
-	if _, err := db.dbPool.Exec(context.Background(), fmt.Sprintf(update_lobby_sql, schema_name, lobby_table_name), lobby.ID, lobby.Name, lobby.Owner, lobby.Password, lobby.Difficulty); err != nil {
+	if _, err := db.dbPool.Exec(context.Background(), fmt.Sprintf(update_lobby_sql, schema_name, lobby_table_name), lobby.ID, lobby.Name, lobby.Password, lobby.Difficulty); err != nil {
 		return fmt.Errorf("unknown error when updating lobby: %v", err)
 	}
 	return nil

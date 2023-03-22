@@ -139,9 +139,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateLobby'
+              $ref: '#/components/schemas/UpdateLobby'
       responses:
-        '204':
+        '200':
           description: |-
             Empty response
     delete:
@@ -244,6 +244,15 @@ components:
         owner:
           type: object
           $ref: '#/components/schemas/Player'
+        password:
+          type: string
+        difficulty:
+          type: string
+    UpdateLobby:
+      type: object
+      properties:
+        name:
+          type: string
         password:
           type: string
         difficulty:

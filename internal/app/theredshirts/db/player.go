@@ -15,6 +15,7 @@ const (
 	player_table_name              = "player"
 	create_player_sql              = "INSERT INTO %s.%s(id, name, lobby_id) VALUES($1, $2, $3)"
 	delete_player_sql              = "DELETE FROM %s.%s WHERE id = $1"
+	delete_player_in_lobby_sql     = "DELETE FROM %s.%s WHERE lobby_id = $1"
 	select_player_by_player_id_sql = "SELECT id, name, lobby_id FROM %s.%s WHERE id = $1"
 	select_player_by_lobby_id_sql  = "SELECT id, name, lobby_id FROM %s.%s WHERE lobby_id = $1"
 )
@@ -41,6 +42,13 @@ func (db *postgresConnection) CreatePlayer(player *Player) error {
 func (db *postgresConnection) DeletePlayer(id uuid.UUID) error {
 	if _, err := db.dbPool.Exec(context.Background(), fmt.Sprintf(delete_player_sql, schema_name, player_table_name), id); err != nil {
 		return fmt.Errorf("unknown error when deliting player: %v", err)
+	}
+	return nil
+}
+
+func (db *postgresConnection) DeleteAllPlayerInLobby(lobbyId uuid.UUID) error {
+	if _, err := db.dbPool.Exec(context.Background(), fmt.Sprintf(delete_player_in_lobby_sql, schema_name, player_table_name), lobbyId); err != nil {
+		return fmt.Errorf("unknown error when deliting players from lobby: %v", err)
 	}
 	return nil
 }

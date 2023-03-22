@@ -34,6 +34,7 @@ type (
 		//Player
 		CreatePlayer(player *Player) error
 		DeletePlayer(id uuid.UUID) error
+		DeleteAllPlayerInLobby(lobbyId uuid.UUID) error
 		GetPlayerById(id uuid.UUID) (*Player, error)
 		GetAllPlayersInLobby(lobbyId uuid.UUID) ([]*Player, error)
 	}
