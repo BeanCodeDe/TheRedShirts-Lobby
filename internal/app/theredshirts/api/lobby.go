@@ -45,13 +45,13 @@ type (
 
 func initLobbyInterface(group *echo.Group, api *EchoApi) {
 	group.POST("", api.createLobbyId)
-	group.PUT(":"+lobby_id_param, api.createLobby)
-	group.PATCH(":"+lobby_id_param, api.updateLobby)
-	group.DELETE(":"+lobby_id_param, api.deleteLobby)
+	group.PUT("/:"+lobby_id_param, api.createLobby)
+	group.PATCH("/:"+lobby_id_param, api.updateLobby)
+	group.DELETE("/:"+lobby_id_param, api.deleteLobby)
 	group.GET("", api.getAllLobbies)
-	group.GET(":"+lobby_id_param, api.getLobby)
-	group.PUT(":"+lobby_id_param+"/player/:"+player_id_param, api.joinLobby)
-	group.DELETE(":"+lobby_id_param+"/player/:"+player_id_param, api.leaveLobby)
+	group.GET("/:"+lobby_id_param, api.getLobby)
+	group.PUT("/:"+lobby_id_param+"/player/:"+player_id_param, api.joinLobby)
+	group.DELETE("/:"+lobby_id_param+"/player/:"+player_id_param, api.leaveLobby)
 }
 
 func (api *EchoApi) createLobbyId(context echo.Context) error {

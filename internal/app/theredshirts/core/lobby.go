@@ -26,6 +26,7 @@ func (core CoreFacade) CreateLobby(lobby *Lobby) error {
 		}
 		return fmt.Errorf("error while creating lobby: %v", err)
 	}
+
 	return nil
 }
 
@@ -40,10 +41,10 @@ func (core CoreFacade) GetLobby(lobbyId uuid.UUID) (*Lobby, error) {
 		return nil, fmt.Errorf("something went wrong while loading players of lobby [%v] from database: %v", lobby.ID, err)
 	}
 
-	owner, err := core.db.GetPlayerById(lobby.Owner)
-	if err != nil {
-		return nil, fmt.Errorf("something went wrong while loading owner [%v] of lobby [%v] from database: %v", lobby.Owner, lobby.ID, err)
-	}
+	//owner, err := core.db.GetPlayerById(lobby.Owner)
+	//if err != nil {
+	//	return nil, fmt.Errorf("something went wrong while loading owner [%v] of lobby [%v] from database: %v", lobby.Owner, lobby.ID, err)
+	//}
 
-	return mapToLobby(lobby, mapToPlayer(owner), mapToPlayers(players)), nil
+	return mapToLobby(lobby, nil /*mapToPlayer(owner)*/, mapToPlayers(players)), nil
 }

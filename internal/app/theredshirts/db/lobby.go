@@ -25,7 +25,7 @@ var (
 )
 
 func (db *postgresConnection) CreateLobby(lobby *Lobby) error {
-	if _, err := db.dbPool.Exec(context.Background(), fmt.Sprintf(create_lobby_sql, schema_name, lobby_table_name), lobby.ID, lobby.Name, lobby.Password, lobby.Difficulty); err != nil {
+	if _, err := db.dbPool.Exec(context.Background(), fmt.Sprintf(create_lobby_sql, schema_name, lobby_table_name), lobby.ID, lobby.Name, lobby.Owner, lobby.Password, lobby.Difficulty); err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			switch pgErr.Code {
@@ -40,7 +40,7 @@ func (db *postgresConnection) CreateLobby(lobby *Lobby) error {
 }
 
 func (db *postgresConnection) UpdateLobby(lobby *Lobby) error {
-	if _, err := db.dbPool.Exec(context.Background(), fmt.Sprintf(update_lobby_sql, schema_name, lobby_table_name), lobby.ID, lobby.Name, lobby.Password, lobby.Difficulty); err != nil {
+	if _, err := db.dbPool.Exec(context.Background(), fmt.Sprintf(update_lobby_sql, schema_name, lobby_table_name), lobby.ID, lobby.Name, lobby.Owner, lobby.Password, lobby.Difficulty); err != nil {
 		return fmt.Errorf("unknown error when updating lobby: %v", err)
 	}
 	return nil
