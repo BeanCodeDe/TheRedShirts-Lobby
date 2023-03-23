@@ -6,6 +6,7 @@ import (
 
 	"github.com/BeanCodeDe/TheRedShirts-Lobby/internal/app/theredshirts/util"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v4"
 )
 
 type (
@@ -25,6 +26,8 @@ type (
 
 	DB interface {
 		Close()
+		StartTransaction() (pgx.Tx, error)
+		HandleTransaction(tx pgx.Tx, err error)
 		//Lobby
 		CreateLobby(lobby *Lobby) error
 		UpdateLobby(lobby *Lobby) error

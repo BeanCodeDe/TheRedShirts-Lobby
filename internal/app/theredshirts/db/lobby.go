@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v4"
 )
 
 const (
@@ -23,6 +24,23 @@ const (
 var (
 	ErrLobbyAlreadyExists = errors.New("lobby already exists")
 )
+
+func (db *postgresConnection) StartTransaction() (pgx.Tx, error) {
+	tx, err := db.dbPool.BeginTx(context.Background(), pgx.TxOptions{})
+	if err != nil {
+		return tx, fmt.Errorf("unknown error while starting transaction: %v", err)
+	}
+	return tx, nil
+
+}
+
+func (db *postgresConnection) HandleTransaction(tx pgx.Tx, err error) {
+	if err != nil {
+		tx.Rollback(context.Background())
+	} else {
+		tx.Commit(context.Background())
+	}
+}
 
 func (db *postgresConnection) CreateLobby(lobby *Lobby) error {
 	if _, err := db.dbPool.Exec(context.Background(), fmt.Sprintf(create_lobby_sql, schema_name, lobby_table_name), lobby.ID, lobby.Name, lobby.Owner, lobby.Password, lobby.Difficulty); err != nil {

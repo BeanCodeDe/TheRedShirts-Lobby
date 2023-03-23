@@ -38,7 +38,6 @@ type (
 		ID         uuid.UUID
 		Name       string
 		Owner      *Player
-		Password   string
 		Difficulty string
 		Players    []*Player
 	}
@@ -171,7 +170,7 @@ func (api *EchoApi) joinLobby(context echo.Context) error {
 	err = api.core.JoinLobby(mapLobbyJoinToCoreJoin(joinLobby, lobbyId, playerId))
 
 	if err != nil {
-		if !errors.Is(err, core.ErrWrongLobbyPassword) {
+		if errors.Is(err, core.ErrWrongLobbyPassword) {
 			logger.Infof("Player enterd wrong lobby password: %v", err)
 			return echo.ErrUnauthorized
 		}
@@ -279,7 +278,7 @@ func mapLobbyUpdateToCoreLobby(lobby *LobbyUpdate, lobbyId uuid.UUID) *core.Lobb
 }
 
 func mapToLobby(lobby *core.Lobby) *Lobby {
-	return &Lobby{ID: lobby.ID, Name: lobby.Name, Owner: mapToPlayer(lobby.Owner), Password: lobby.Password, Difficulty: lobby.Difficulty, Players: mapToPlayers(lobby.Players)}
+	return &Lobby{ID: lobby.ID, Name: lobby.Name, Owner: mapToPlayer(lobby.Owner), Difficulty: lobby.Difficulty, Players: mapToPlayers(lobby.Players)}
 }
 
 func mapToLobbies(coreLobbies []*core.Lobby) []*Lobby {
