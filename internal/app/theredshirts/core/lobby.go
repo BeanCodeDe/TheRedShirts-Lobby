@@ -26,12 +26,8 @@ func (core CoreFacade) CreateLobby(lobby *Lobby) error {
 
 	}
 
-	if err := core.db.DeletePlayer(lobby.Owner.ID); err != nil {
-		return fmt.Errorf("something went wrong while deleting owner [%v] from player list: %v", lobby.Owner.ID, err)
-	}
-
-	if err := core.db.CreatePlayer(mapToDBPlayer(lobby.Owner, lobby.ID)); err != nil {
-		return fmt.Errorf("something went wrong while creating owner [%v] in player list: %v", lobby.Owner.ID, err)
+	if err := core.JoinLobby(&Join{PlayerId: lobby.Owner.ID, LobbyID: lobby.ID, Name: lobby.Owner.Name, Password: lobby.Password}); err != nil {
+		return err
 	}
 
 	return nil
@@ -108,4 +104,32 @@ func (core CoreFacade) GetLobbies() ([]*Lobby, error) {
 	}
 
 	return coreLobbies, nil
+}
+
+func (core CoreFacade) JoinLobby(join *Join) error {
+	if err := core.LeaveLobby(join.PlayerId); err != nil {
+		return err
+	}
+
+	lobby, err := core.db.GetLobbyById(join.LobbyID)
+	if err != nil {
+		return fmt.Errorf("something went wrong while loading lobby %v from database: %v", join.LobbyID, err)
+	}
+
+	if lobby.Password != join.Password {
+		return ErrWrongLobbyPassword
+	}
+
+	if err := core.db.CreatePlayer(&db.Player{ID: join.PlayerId, Name: join.Name, LobbyId: join.LobbyID}); err != nil {
+		return fmt.Errorf("something went wrong while creating player %v from database: %v", join.PlayerId, err)
+	}
+
+	return nil
+}
+
+func (core CoreFacade) LeaveLobby(playerId uuid.UUID) error {
+	if err := core.db.DeletePlayer(playerId); err != nil {
+		return fmt.Errorf("something went wrong while deleting player %v from database: %v", playerId, err)
+	}
+	return nil
 }

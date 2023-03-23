@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/BeanCodeDe/TheRedShirts-Lobby/internal/app/theredshirts/db"
@@ -20,6 +21,8 @@ type (
 		UpdateLobby(lobby *Lobby) error
 		GetLobbies() ([]*Lobby, error)
 		DeleteLobby(lobbyId uuid.UUID) error
+		JoinLobby(join *Join) error
+		LeaveLobby(playerId uuid.UUID) error
 	}
 
 	//Objects
@@ -32,10 +35,21 @@ type (
 		Players    []*Player
 	}
 
+	Join struct {
+		PlayerId uuid.UUID
+		LobbyID  uuid.UUID
+		Name     string
+		Password string
+	}
+
 	Player struct {
 		ID   uuid.UUID
 		Name string
 	}
+)
+
+var (
+	ErrWrongLobbyPassword = errors.New("wrong password")
 )
 
 func NewCore() (Core, error) {

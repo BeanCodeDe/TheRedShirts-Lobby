@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -26,6 +27,11 @@ type (
 		Name       string `validate:"required"`
 		Password   string
 		Difficulty string `validate:"required"`
+	}
+
+	LobbyJoin struct {
+		Name     string `validate:"required"`
+		Password string
 	}
 
 	Lobby struct {
@@ -115,7 +121,7 @@ func (api *EchoApi) deleteLobby(context echo.Context) error {
 	}
 
 	if err := api.core.DeleteLobby(lobbyId); err != nil {
-		log.Warnf("Error while loading lobby: %v", err)
+		logger.Warnf("Error while loading lobby: %v", err)
 		return echo.ErrInternalServerError
 	}
 
@@ -128,7 +134,7 @@ func (api *EchoApi) getAllLobbies(context echo.Context) error {
 
 	lobbies, err := api.core.GetLobbies()
 	if err != nil {
-		log.Warnf("Error while loading lobby: %v", err)
+		logger.Warnf("Error while loading lobby: %v", err)
 		return echo.ErrInternalServerError
 	}
 	return context.JSON(http.StatusOK, mapToLobbies(lobbies))
@@ -146,7 +152,7 @@ func (api *EchoApi) getLobby(context echo.Context) error {
 
 	lobby, err := api.core.GetLobby(lobbyId)
 	if err != nil {
-		log.Warnf("Error while loading lobby: %v", err)
+		logger.Warnf("Error while loading lobby: %v", err)
 		return echo.ErrInternalServerError
 	}
 	return context.JSON(http.StatusOK, mapToLobby(lobby))
@@ -155,13 +161,43 @@ func (api *EchoApi) getLobby(context echo.Context) error {
 func (api *EchoApi) joinLobby(context echo.Context) error {
 	logger := context.Get(logger_key).(*log.Entry)
 	logger.Debug("Join lobby")
-	return context.String(http.StatusCreated, uuid.NewString())
+
+	joinLobby, lobbyId, playerId, err := bindLobbyJoinDTO(context)
+	if err != nil {
+		logger.Warnf("Error while binding lobby join: %v", err)
+		return echo.ErrBadRequest
+	}
+
+	err = api.core.JoinLobby(mapLobbyJoinToCoreJoin(joinLobby, lobbyId, playerId))
+
+	if err != nil {
+		if !errors.Is(err, core.ErrWrongLobbyPassword) {
+			logger.Infof("Player enterd wrong lobby password: %v", err)
+			return echo.ErrUnauthorized
+		}
+		logger.Warnf("Error while joining lobby: %v", err)
+		return echo.ErrInternalServerError
+	}
+
+	return context.NoContent(http.StatusCreated)
 }
 
 func (api *EchoApi) leaveLobby(context echo.Context) error {
 	logger := context.Get(logger_key).(*log.Entry)
 	logger.Debug("Leave lobby")
-	return context.String(http.StatusCreated, uuid.NewString())
+
+	playerId, err := getPlayerId(context)
+	if err != nil {
+		logger.Warnf("Error while binding player id: %v", err)
+		return echo.ErrBadRequest
+	}
+
+	if err = api.core.LeaveLobby(playerId); err != nil {
+		logger.Warnf("Error while player leaving lobyy: %v", err)
+		return echo.ErrInternalServerError
+	}
+
+	return context.NoContent(http.StatusOK)
 }
 
 func bindLobbyCreationDTO(context echo.Context) (*LobbyCreate, uuid.UUID, error) {
@@ -194,6 +230,26 @@ func bindLobbyUpdateDTO(context echo.Context) (*LobbyUpdate, uuid.UUID, error) {
 	return lobby, lobbyId, nil
 }
 
+func bindLobbyJoinDTO(context echo.Context) (lobbyJoin *LobbyJoin, lobbyId uuid.UUID, playerId uuid.UUID, err error) {
+	lobbyJoin = new(LobbyJoin)
+	if err := context.Bind(lobbyJoin); err != nil {
+		return nil, uuid.Nil, uuid.Nil, fmt.Errorf("could not bind lobby, %v", err)
+	}
+	if err := context.Validate(lobbyJoin); err != nil {
+		return nil, uuid.Nil, uuid.Nil, fmt.Errorf("could not validate lobby, %v", err)
+	}
+	lobbyId, err = getLobbyId(context)
+	if err != nil {
+		return nil, uuid.Nil, uuid.Nil, err
+	}
+
+	playerId, err = getPlayerId(context)
+	if err != nil {
+		return nil, uuid.Nil, uuid.Nil, err
+	}
+	return lobbyJoin, lobbyId, playerId, nil
+}
+
 func getLobbyId(context echo.Context) (uuid.UUID, error) {
 	lobbyId, err := uuid.Parse(context.Param(lobby_id_param))
 	if err != nil {
@@ -208,6 +264,10 @@ func getPlayerId(context echo.Context) (uuid.UUID, error) {
 		return uuid.Nil, fmt.Errorf("error while binding playerId: %v", err)
 	}
 	return playerId, nil
+}
+
+func mapLobbyJoinToCoreJoin(lobbyJoin *LobbyJoin, lobbyId uuid.UUID, playerId uuid.UUID) *core.Join {
+	return &core.Join{PlayerId: playerId, LobbyID: lobbyId, Name: lobbyJoin.Name, Password: lobbyJoin.Password}
 }
 
 func mapLobbyCreateToCoreLobby(lobby *LobbyCreate, lobbyId uuid.UUID) *core.Lobby {
