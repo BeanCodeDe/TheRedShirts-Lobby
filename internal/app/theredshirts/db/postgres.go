@@ -11,6 +11,7 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
+	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	_ "github.com/lib/pq"
 )
@@ -23,6 +24,10 @@ var (
 type (
 	postgresConnection struct {
 		dbPool *pgxpool.Pool
+	}
+
+	postgresTransaction struct {
+		tx pgx.Tx
 	}
 )
 
@@ -75,4 +80,21 @@ func migratePostgresDatabase(url string) error {
 		return fmt.Errorf("error while migrating: %v", err)
 	}
 	return nil
+}
+
+func (db *postgresConnection) StartTransaction() (DBTx, error) {
+	tx, err := db.dbPool.BeginTx(context.Background(), pgx.TxOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("unknown error while starting transaction: %v", err)
+	}
+	return &postgresTransaction{tx: tx}, nil
+
+}
+
+func (tx *postgresTransaction) HandleTransaction(err error) {
+	if err != nil {
+		tx.tx.Rollback(context.Background())
+	} else {
+		tx.tx.Commit(context.Background())
+	}
 }

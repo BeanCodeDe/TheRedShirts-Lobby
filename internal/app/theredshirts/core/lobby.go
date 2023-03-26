@@ -3,6 +3,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/BeanCodeDe/TheRedShirts-Lobby/internal/app/theredshirts/db"
 	"github.com/google/uuid"
@@ -12,15 +13,15 @@ func (core CoreFacade) CreateLobby(lobby *Lobby) error {
 	dbLobby := mapToDBLobby(lobby)
 
 	tx, err := core.db.StartTransaction()
-	defer core.db.HandleTransaction(tx, err)
+	defer tx.HandleTransaction(err)
 	if err != nil {
 		return fmt.Errorf("something went wrong while creating transaction: %v", err)
 	}
-	if err := core.db.CreateLobby(dbLobby); err != nil {
+	if err := tx.CreateLobby(dbLobby); err != nil {
 		if !errors.Is(err, db.ErrLobbyAlreadyExists) {
 			return fmt.Errorf("error while creating lobby: %v", err)
 		}
-		foundLobby, err := core.db.GetLobbyById(lobby.ID)
+		foundLobby, err := tx.GetLobbyById(lobby.ID)
 		if err != nil {
 			return fmt.Errorf("something went wrong while checking if lobby [%v] is already created: %v", lobby.ID, err)
 		}
@@ -31,7 +32,7 @@ func (core CoreFacade) CreateLobby(lobby *Lobby) error {
 
 	}
 
-	if err := core.joinLobby(lobby.Owner.ID, lobby.Name, lobby.ID, lobby.Password); err != nil {
+	if err := core.joinLobby(tx, lobby.Owner.ID, lobby.Name, lobby.ID, lobby.Password); err != nil {
 		return err
 	}
 
@@ -40,11 +41,11 @@ func (core CoreFacade) CreateLobby(lobby *Lobby) error {
 
 func (core CoreFacade) UpdateLobby(lobby *Lobby) error {
 	tx, err := core.db.StartTransaction()
-	defer core.db.HandleTransaction(tx, err)
+	defer tx.HandleTransaction(err)
 	if err != nil {
 		return fmt.Errorf("something went wrong while creating transaction: %v", err)
 	}
-	dbLobby, err := core.db.GetLobbyById(lobby.ID)
+	dbLobby, err := tx.GetLobbyById(lobby.ID)
 	if err != nil {
 		return fmt.Errorf("something went wrong while loading lobby [%v] from database: %v", lobby.ID, err)
 	}
@@ -53,7 +54,7 @@ func (core CoreFacade) UpdateLobby(lobby *Lobby) error {
 	dbLobby.Difficulty = lobby.Difficulty
 	dbLobby.Password = lobby.Password
 
-	if err := core.db.UpdateLobby(dbLobby); err != nil {
+	if err := tx.UpdateLobby(dbLobby); err != nil {
 		if err != nil {
 			return fmt.Errorf("something went wrong while updating lobby [%v]: %v", lobby.ID, err)
 		}
@@ -63,32 +64,45 @@ func (core CoreFacade) UpdateLobby(lobby *Lobby) error {
 
 func (core CoreFacade) DeleteLobby(lobbyId uuid.UUID) error {
 	tx, err := core.db.StartTransaction()
-	defer core.db.HandleTransaction(tx, err)
+	defer tx.HandleTransaction(err)
 	if err != nil {
 		return fmt.Errorf("something went wrong while creating transaction: %v", err)
 	}
-	if err := core.db.DeleteAllPlayerInLobby(lobbyId); err != nil {
+	err = core.deleteLobby(tx, lobbyId)
+	return err
+}
+
+func (core CoreFacade) deleteLobby(tx db.DBTx, lobbyId uuid.UUID) error {
+	if err := tx.DeleteAllPlayerInLobby(lobbyId); err != nil {
 		return fmt.Errorf("an error accourd while deleting all players from lobby [%v]: %v", lobbyId, err)
 	}
 
-	if err := core.db.DeleteLobby(lobbyId); err != nil {
+	if err := tx.DeleteLobby(lobbyId); err != nil {
 		return fmt.Errorf("an error accourd while deleting lobby [%v]: %v", lobbyId, err)
 	}
 	return nil
 }
 
 func (core CoreFacade) GetLobby(lobbyId uuid.UUID) (*Lobby, error) {
-	lobby, err := core.db.GetLobbyById(lobbyId)
+	tx, err := core.db.StartTransaction()
+	defer tx.HandleTransaction(err)
+
+	lobby, err := core.getLobby(tx, lobbyId)
+	return lobby, err
+}
+
+func (core CoreFacade) getLobby(tx db.DBTx, lobbyId uuid.UUID) (*Lobby, error) {
+	lobby, err := tx.GetLobbyById(lobbyId)
 	if err != nil {
 		return nil, fmt.Errorf("something went wrong while loading lobby [%v] from database: %v", lobby.ID, err)
 	}
 
-	players, err := core.db.GetAllPlayersInLobby(lobbyId)
+	players, err := tx.GetAllPlayersInLobby(lobbyId)
 	if err != nil {
 		return nil, fmt.Errorf("something went wrong while loading players of lobby [%v] from database: %v", lobby.ID, err)
 	}
 
-	owner, err := core.db.GetPlayerById(lobby.Owner)
+	owner, err := tx.GetPlayerById(lobby.Owner)
 	if err != nil {
 		return nil, fmt.Errorf("something went wrong while loading owner [%v] of lobby [%v] from database: %v", lobby.Owner, lobby.ID, err)
 	}
@@ -97,7 +111,10 @@ func (core CoreFacade) GetLobby(lobbyId uuid.UUID) (*Lobby, error) {
 }
 
 func (core CoreFacade) GetLobbies() ([]*Lobby, error) {
-	lobbies, err := core.db.GetAllLobbies()
+	tx, err := core.db.StartTransaction()
+	defer tx.HandleTransaction(err)
+
+	lobbies, err := tx.GetAllLobbies()
 	if err != nil {
 		return nil, fmt.Errorf("something went wrong while loading all lobbies from database: %v", err)
 	}
@@ -105,12 +122,12 @@ func (core CoreFacade) GetLobbies() ([]*Lobby, error) {
 	coreLobbies := make([]*Lobby, len(lobbies))
 	for index, lobby := range lobbies {
 
-		players, err := core.db.GetAllPlayersInLobby(lobby.ID)
+		players, err := tx.GetAllPlayersInLobby(lobby.ID)
 		if err != nil {
 			return nil, fmt.Errorf("something went wrong while loading players of lobby [%v] from database: %v", lobby.ID, err)
 		}
 
-		owner, err := core.db.GetPlayerById(lobby.Owner)
+		owner, err := tx.GetPlayerById(lobby.Owner)
 		if err != nil {
 			return nil, fmt.Errorf("something went wrong while loading owner [%v] of lobby [%v] from database: %v", lobby.Owner, lobby.ID, err)
 		}
@@ -122,35 +139,87 @@ func (core CoreFacade) GetLobbies() ([]*Lobby, error) {
 
 func (core CoreFacade) JoinLobby(join *Join) error {
 	tx, err := core.db.StartTransaction()
-	defer core.db.HandleTransaction(tx, err)
+	defer tx.HandleTransaction(err)
 	if err != nil {
 		return fmt.Errorf("something went wrong while creating transaction: %v", err)
 	}
-	err = core.joinLobby(join.PlayerId, join.Name, join.LobbyID, join.Password)
+	err = core.joinLobby(tx, join.PlayerId, join.Name, join.LobbyID, join.Password)
 	return err
 }
 
-func (core CoreFacade) joinLobby(playerId uuid.UUID, playerName string, lobbyId uuid.UUID, password string) error {
-	if err := core.LeaveLobby(playerId); err != nil {
+func (core CoreFacade) joinLobby(tx db.DBTx, playerId uuid.UUID, playerName string, lobbyId uuid.UUID, password string) error {
+
+	player, err := core.getPlayer(tx, playerId)
+	if err != nil {
 		return err
 	}
-	lobby, err := core.db.GetLobbyById(lobbyId)
+
+	if player != nil {
+		if lobbyId != player.LobbyId {
+			if err := core.LeaveLobby(lobbyId, playerId); err != nil {
+				return err
+			}
+		} else {
+			player.LastRefresh = time.Now()
+			if err := tx.UpdatePlayer(mapToDBPlayer(player, lobbyId)); err != nil {
+				return fmt.Errorf("something went wrong while creating player %v from database: %v", playerId, err)
+			}
+			return nil
+		}
+	}
+
+	lobby, err := tx.GetLobbyById(lobbyId)
 	if err != nil {
 		return fmt.Errorf("something went wrong while loading lobby %v from database: %v", lobbyId, err)
 	}
 	if lobby.Password != password {
 		return ErrWrongLobbyPassword
 	}
-	if err := core.db.CreatePlayer(&db.Player{ID: playerId, Name: playerName, LobbyId: lobbyId}); err != nil {
+	if err := tx.CreatePlayer(&db.Player{ID: playerId, Name: playerName, LobbyId: lobbyId, LastRefresh: time.Now()}); err != nil {
 		return fmt.Errorf("something went wrong while creating player %v from database: %v", playerId, err)
 	}
 
 	return nil
 }
 
-func (core CoreFacade) LeaveLobby(playerId uuid.UUID) error {
-	if err := core.db.DeletePlayer(playerId); err != nil {
+func (core CoreFacade) LeaveLobby(lobbyId uuid.UUID, playerId uuid.UUID) error {
+	tx, err := core.db.StartTransaction()
+	defer tx.HandleTransaction(err)
+
+	err = core.leaveLobby(tx, lobbyId, playerId)
+	return err
+}
+
+func (core CoreFacade) leaveLobby(tx db.DBTx, lobbyId uuid.UUID, playerId uuid.UUID) error {
+	player, err := core.getPlayer(tx, playerId)
+	if err != nil {
+		return err
+	}
+
+	if player.LobbyId != lobbyId {
+		return nil
+	}
+
+	if err := tx.DeletePlayer(playerId); err != nil {
 		return fmt.Errorf("something went wrong while deleting player %v from database: %v", playerId, err)
 	}
-	return nil
+
+	lobby, err := core.getLobby(tx, lobbyId)
+	if err != nil {
+		return err
+	}
+
+	if len(lobby.Players) == 0 {
+		return core.deleteLobby(tx, lobbyId)
+	} else {
+		return nil
+	}
+}
+
+func mapToDBLobby(lobby *Lobby) *db.Lobby {
+	return &db.Lobby{ID: lobby.ID, Name: lobby.Name, Owner: lobby.Owner.ID, Password: lobby.Password, Difficulty: lobby.Difficulty}
+}
+
+func mapToLobby(lobby *db.Lobby, owner *Player, players []*Player) *Lobby {
+	return &Lobby{ID: lobby.ID, Name: lobby.Name, Owner: owner, Password: lobby.Password, Difficulty: lobby.Difficulty, Players: players}
 }

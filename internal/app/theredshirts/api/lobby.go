@@ -191,7 +191,13 @@ func (api *EchoApi) leaveLobby(context echo.Context) error {
 		return echo.ErrBadRequest
 	}
 
-	if err = api.core.LeaveLobby(playerId); err != nil {
+	lobbbyId, err := getLobbyId(context)
+	if err != nil {
+		logger.Warnf("Error while binding player id: %v", err)
+		return echo.ErrBadRequest
+	}
+
+	if err = api.core.LeaveLobby(lobbbyId, playerId); err != nil {
 		logger.Warnf("Error while player leaving lobyy: %v", err)
 		return echo.ErrInternalServerError
 	}

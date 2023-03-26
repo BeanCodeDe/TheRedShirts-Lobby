@@ -3,10 +3,10 @@ package db
 import (
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/BeanCodeDe/TheRedShirts-Lobby/internal/app/theredshirts/util"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v4"
 )
 
 type (
@@ -19,25 +19,32 @@ type (
 	}
 
 	Player struct {
-		ID      uuid.UUID `db:"id"`
-		Name    string    `db:"name"`
-		LobbyId uuid.UUID `db:"lobby_id"`
+		ID          uuid.UUID `db:"id"`
+		Name        string    `db:"name"`
+		LobbyId     uuid.UUID `db:"lobby_id"`
+		LastRefresh time.Time `db:"last_refresh"`
 	}
 
 	DB interface {
 		Close()
-		StartTransaction() (pgx.Tx, error)
-		HandleTransaction(tx pgx.Tx, err error)
+		StartTransaction() (DBTx, error)
+	}
+
+	DBTx interface {
+		HandleTransaction(err error)
 		//Lobby
 		CreateLobby(lobby *Lobby) error
 		UpdateLobby(lobby *Lobby) error
 		DeleteLobby(id uuid.UUID) error
+		DeleteEmptyLobbies() error
 		GetLobbyById(id uuid.UUID) (*Lobby, error)
 		GetAllLobbies() ([]*Lobby, error)
 		//Player
 		CreatePlayer(player *Player) error
 		DeletePlayer(id uuid.UUID) error
 		DeleteAllPlayerInLobby(lobbyId uuid.UUID) error
+		DeletePlayerOlderRefreshDate(time time.Time) error
+		UpdatePlayer(player *Player) error
 		GetPlayerById(id uuid.UUID) (*Player, error)
 		GetAllPlayersInLobby(lobbyId uuid.UUID) ([]*Player, error)
 	}

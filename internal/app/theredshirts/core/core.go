@@ -3,6 +3,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/BeanCodeDe/TheRedShirts-Lobby/internal/app/theredshirts/db"
 	"github.com/google/uuid"
@@ -22,7 +23,7 @@ type (
 		GetLobbies() ([]*Lobby, error)
 		DeleteLobby(lobbyId uuid.UUID) error
 		JoinLobby(join *Join) error
-		LeaveLobby(playerId uuid.UUID) error
+		LeaveLobby(lobbyId uuid.UUID, playerId uuid.UUID) error
 	}
 
 	//Objects
@@ -43,8 +44,10 @@ type (
 	}
 
 	Player struct {
-		ID   uuid.UUID
-		Name string
+		ID          uuid.UUID
+		Name        string
+		LastRefresh time.Time
+		LobbyId     uuid.UUID
 	}
 )
 
@@ -57,32 +60,7 @@ func NewCore() (Core, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error while initializing database: %v", err)
 	}
-	return &CoreFacade{db: db}, nil
-}
-
-func mapToDBLobby(lobby *Lobby) *db.Lobby {
-	return &db.Lobby{ID: lobby.ID, Name: lobby.Name, Owner: lobby.Owner.ID, Password: lobby.Password, Difficulty: lobby.Difficulty}
-}
-
-func mapToDBPlayer(player *Player, lobbyId uuid.UUID) *db.Player {
-	return &db.Player{ID: player.ID, Name: player.Name, LobbyId: lobbyId}
-}
-
-func mapToLobby(lobby *db.Lobby, owner *Player, players []*Player) *Lobby {
-	return &Lobby{ID: lobby.ID, Name: lobby.Name, Owner: owner, Password: lobby.Password, Difficulty: lobby.Difficulty, Players: players}
-}
-
-func mapToPlayer(player *db.Player) *Player {
-	if player == nil {
-		return nil
-	}
-	return &Player{ID: player.ID, Name: player.Name}
-}
-
-func mapToPlayers(dbPlayers []*db.Player) []*Player {
-	players := make([]*Player, len(dbPlayers))
-	for index, player := range dbPlayers {
-		players[index] = mapToPlayer(player)
-	}
-	return players
+	core := &CoreFacade{db: db}
+	core.startCleanUp()
+	return core, nil
 }
