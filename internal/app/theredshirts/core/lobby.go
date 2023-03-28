@@ -32,7 +32,7 @@ func (core CoreFacade) CreateLobby(lobby *Lobby) error {
 
 	}
 
-	if err := core.joinLobby(tx, lobby.Owner.ID, lobby.Name, lobby.ID, lobby.Password); err != nil {
+	if err := core.joinLobby(tx, lobby.Owner.ID, lobby.Owner.Name, lobby.Owner.Team, lobby.ID, lobby.Password); err != nil {
 		return err
 	}
 
@@ -143,11 +143,11 @@ func (core CoreFacade) JoinLobby(join *Join) error {
 	if err != nil {
 		return fmt.Errorf("something went wrong while creating transaction: %v", err)
 	}
-	err = core.joinLobby(tx, join.PlayerId, join.Name, join.LobbyID, join.Password)
+	err = core.joinLobby(tx, join.PlayerId, join.Name, join.Team, join.LobbyID, join.Password)
 	return err
 }
 
-func (core CoreFacade) joinLobby(tx db.DBTx, playerId uuid.UUID, playerName string, lobbyId uuid.UUID, password string) error {
+func (core CoreFacade) joinLobby(tx db.DBTx, playerId uuid.UUID, playerName string, teamName string, lobbyId uuid.UUID, password string) error {
 
 	player, err := core.getPlayer(tx, playerId)
 	if err != nil {
@@ -161,6 +161,7 @@ func (core CoreFacade) joinLobby(tx db.DBTx, playerId uuid.UUID, playerName stri
 			}
 		} else {
 			player.LastRefresh = time.Now()
+			player.Team = teamName
 			if err := tx.UpdatePlayer(mapToDBPlayer(player, lobbyId)); err != nil {
 				return fmt.Errorf("something went wrong while creating player %v from database: %v", playerId, err)
 			}
@@ -175,7 +176,7 @@ func (core CoreFacade) joinLobby(tx db.DBTx, playerId uuid.UUID, playerName stri
 	if lobby.Password != password {
 		return ErrWrongLobbyPassword
 	}
-	if err := tx.CreatePlayer(&db.Player{ID: playerId, Name: playerName, LobbyId: lobbyId, LastRefresh: time.Now()}); err != nil {
+	if err := tx.CreatePlayer(&db.Player{ID: playerId, Name: playerName, Team: teamName, LobbyId: lobbyId, LastRefresh: time.Now()}); err != nil {
 		return fmt.Errorf("something went wrong while creating player %v from database: %v", playerId, err)
 	}
 

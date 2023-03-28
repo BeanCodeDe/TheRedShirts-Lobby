@@ -26,11 +26,11 @@ func (core CoreFacade) startCleanUp() {
 		}
 	})
 
-	s.StartBlocking()
+	//s.StartAsync()
 }
 
 func (core CoreFacade) cleanUpAfkPlayers(tx db.DBTx) error {
-	if err := tx.DeletePlayerOlderRefreshDate(time.Now().Add(time.Second * -5)); err != nil {
+	if err := tx.DeletePlayerOlderRefreshDate(time.Now().Add(time.Hour * -5)); err != nil {
 		return fmt.Errorf("error while cleaning up afk players: %v", err)
 	}
 	return nil

@@ -40,12 +40,14 @@ type (
 		PlayerId uuid.UUID
 		LobbyID  uuid.UUID
 		Name     string
+		Team     string
 		Password string
 	}
 
 	Player struct {
 		ID          uuid.UUID
 		Name        string
+		Team        string
 		LastRefresh time.Time
 		LobbyId     uuid.UUID
 	}

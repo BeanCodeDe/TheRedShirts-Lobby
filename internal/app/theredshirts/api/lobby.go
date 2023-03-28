@@ -17,10 +17,10 @@ const player_id_param = "playerId"
 
 type (
 	LobbyCreate struct {
-		Name       string  `validate:"required"`
-		Owner      *Player `validate:"required"`
-		Password   string
-		Difficulty string `validate:"required"`
+		Name       string  `json:"name" validate:"required"`
+		Owner      *Player `json:"owner" validate:"required"`
+		Password   string  `json:"password"`
+		Difficulty string  `json:"difficulty" validate:"required"`
 	}
 
 	LobbyUpdate struct {
@@ -30,21 +30,23 @@ type (
 	}
 
 	LobbyJoin struct {
-		Name     string `validate:"required"`
-		Password string
+		Name     string `json:"name" validate:"required"`
+		Team     string `json:"team" validate:"required"`
+		Password string `json:"password"`
 	}
 
 	Lobby struct {
-		ID         uuid.UUID
-		Name       string
-		Owner      *Player
-		Difficulty string
-		Players    []*Player
+		ID         uuid.UUID `json:"id"`
+		Name       string    `json:"name"`
+		Owner      *Player   `json:"owner"`
+		Difficulty string    `json:"difficulty"`
+		Players    []*Player `json:"players"`
 	}
 
 	Player struct {
-		ID   uuid.UUID `validate:"required"`
-		Name string    `validate:"required"`
+		ID   uuid.UUID `json:"id" validate:"required"`
+		Name string    `json:"name" validate:"required"`
+		Team string    `json:"team" validate:"required"`
 	}
 )
 
@@ -272,7 +274,7 @@ func getPlayerId(context echo.Context) (uuid.UUID, error) {
 }
 
 func mapLobbyJoinToCoreJoin(lobbyJoin *LobbyJoin, lobbyId uuid.UUID, playerId uuid.UUID) *core.Join {
-	return &core.Join{PlayerId: playerId, LobbyID: lobbyId, Name: lobbyJoin.Name, Password: lobbyJoin.Password}
+	return &core.Join{PlayerId: playerId, LobbyID: lobbyId, Name: lobbyJoin.Name, Team: lobbyJoin.Team, Password: lobbyJoin.Password}
 }
 
 func mapLobbyCreateToCoreLobby(lobby *LobbyCreate, lobbyId uuid.UUID) *core.Lobby {

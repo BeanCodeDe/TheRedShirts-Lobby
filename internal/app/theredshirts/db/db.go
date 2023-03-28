@@ -21,6 +21,7 @@ type (
 	Player struct {
 		ID          uuid.UUID `db:"id"`
 		Name        string    `db:"name"`
+		Team        string    `db:"team"`
 		LobbyId     uuid.UUID `db:"lobby_id"`
 		LastRefresh time.Time `db:"last_refresh"`
 	}

@@ -67,7 +67,7 @@ func setLoggerMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		correlationId := c.Request().Header.Get(correlation_id_header)
 		_, err := uuid.Parse(correlationId)
 		if err != nil {
-			log.Warn("Correlation id is not from format uuid. Set default correlation id.")
+			log.Warn("Correlation id is not from format uuid. Set default correlation id. Error: %v", err)
 			correlationId = "WRONG FORMAT"
 		}
 		logger := log.WithFields(log.Fields{
