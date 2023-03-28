@@ -33,3 +33,12 @@ func mapToPlayers(dbPlayers []*db.Player) []*Player {
 func mapToDBPlayer(player *Player, lobbyId uuid.UUID) *db.Player {
 	return &db.Player{ID: player.ID, Name: player.Name, LobbyId: lobbyId}
 }
+
+func findPlayerNot(players []*Player, notPlayerId uuid.UUID) *Player {
+	for _, player := range players {
+		if player.ID != notPlayerId {
+			return player
+		}
+	}
+	return nil
+}

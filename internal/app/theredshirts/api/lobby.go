@@ -204,7 +204,7 @@ func (api *EchoApi) leaveLobby(context echo.Context) error {
 		return echo.ErrInternalServerError
 	}
 
-	return context.NoContent(http.StatusOK)
+	return context.NoContent(http.StatusNoContent)
 }
 
 func bindLobbyCreationDTO(context echo.Context) (*LobbyCreate, uuid.UUID, error) {

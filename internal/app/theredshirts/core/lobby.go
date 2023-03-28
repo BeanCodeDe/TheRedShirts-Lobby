@@ -42,9 +42,11 @@ func (core CoreFacade) CreateLobby(lobby *Lobby) error {
 func (core CoreFacade) UpdateLobby(lobby *Lobby) error {
 	tx, err := core.db.StartTransaction()
 	defer tx.HandleTransaction(err)
-	if err != nil {
-		return fmt.Errorf("something went wrong while creating transaction: %v", err)
-	}
+	err = core.updateLobby(tx, lobby)
+	return err
+}
+
+func (core CoreFacade) updateLobby(tx db.DBTx, lobby *Lobby) error {
 	dbLobby, err := tx.GetLobbyById(lobby.ID)
 	if err != nil {
 		return fmt.Errorf("something went wrong while loading lobby [%v] from database: %v", lobby.ID, err)
@@ -61,7 +63,6 @@ func (core CoreFacade) UpdateLobby(lobby *Lobby) error {
 	}
 	return nil
 }
-
 func (core CoreFacade) DeleteLobby(lobbyId uuid.UUID) error {
 	tx, err := core.db.StartTransaction()
 	defer tx.HandleTransaction(err)
@@ -201,20 +202,29 @@ func (core CoreFacade) leaveLobby(tx db.DBTx, lobbyId uuid.UUID, playerId uuid.U
 		return nil
 	}
 
-	if err := tx.DeletePlayer(playerId); err != nil {
-		return fmt.Errorf("something went wrong while deleting player %v from database: %v", playerId, err)
-	}
-
 	lobby, err := core.getLobby(tx, lobbyId)
 	if err != nil {
 		return err
 	}
 
-	if len(lobby.Players) == 0 {
-		return core.deleteLobby(tx, lobbyId)
-	} else {
-		return nil
+	if lobby.Owner.ID == playerId {
+		foundNewOwner := findPlayerNot(lobby.Players, playerId)
+		if foundNewOwner == nil {
+			if err := core.deleteLobby(tx, lobbyId); err != nil {
+				return err
+			}
+		} else {
+			lobby.Owner = foundNewOwner
+			if err := core.updateLobby(tx, lobby); err != nil {
+				return err
+			}
+		}
 	}
+
+	if err := tx.DeletePlayer(playerId); err != nil {
+		return fmt.Errorf("something went wrong while deleting player %v from database: %v", playerId, err)
+	}
+	return nil
 }
 
 func mapToDBLobby(lobby *Lobby) *db.Lobby {
