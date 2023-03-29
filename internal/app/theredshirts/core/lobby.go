@@ -54,6 +54,7 @@ func (core CoreFacade) updateLobby(tx db.DBTx, lobby *Lobby) error {
 
 	dbLobby.Name = lobby.Name
 	dbLobby.Difficulty = lobby.Difficulty
+	dbLobby.Owner = lobby.Owner.ID
 	dbLobby.Password = lobby.Password
 
 	if err := tx.UpdateLobby(dbLobby); err != nil {
