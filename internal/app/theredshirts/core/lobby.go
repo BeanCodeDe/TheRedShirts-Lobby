@@ -96,7 +96,7 @@ func (core CoreFacade) GetLobby(lobbyId uuid.UUID) (*Lobby, error) {
 func (core CoreFacade) getLobby(tx db.DBTx, lobbyId uuid.UUID) (*Lobby, error) {
 	lobby, err := tx.GetLobbyById(lobbyId)
 	if err != nil {
-		return nil, fmt.Errorf("something went wrong while loading lobby [%v] from database: %v", lobby.ID, err)
+		return nil, fmt.Errorf("something went wrong while loading lobby [%v] from database: %v", lobbyId, err)
 	}
 
 	players, err := tx.GetAllPlayersInLobby(lobbyId)
