@@ -4,9 +4,9 @@ CREATE TABLE theredshirts_lobby.lobby (
     name varchar NOT NULL,
     owner uuid NOT NULL,
     password varchar NOT NULL,
-    difficulty number NOT NULL,
-    mission_length number NOT NULL,
-    crew_members number NOT NULL,
-    max_players number NOT NULL,
+    difficulty integer NOT NULL,
+    mission_length integer NOT NULL,
+    crew_members integer NOT NULL,
+    max_players integer NOT NULL,
     expansion_packs varchar[] 
 );

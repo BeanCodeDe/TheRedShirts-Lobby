@@ -75,6 +75,7 @@ func (tx *postgresTransaction) GetPlayerById(id uuid.UUID) (*Player, error) {
 	if err := pgxscan.Select(context.Background(), tx.tx, &players, fmt.Sprintf(select_player_by_player_id_sql, schema_name, player_table_name), id); err != nil {
 		return nil, fmt.Errorf("error while selecting player with id %v: %v", id, err)
 	}
+
 	if len(players) == 0 {
 		return nil, nil
 	}

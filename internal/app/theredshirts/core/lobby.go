@@ -209,12 +209,19 @@ func (core CoreFacade) LeaveLobby(context *util.Context, lobbyId uuid.UUID, play
 }
 
 func (core CoreFacade) leaveLobby(context *util.Context, tx db.DBTx, lobbyId uuid.UUID, playerId uuid.UUID) error {
+	context.Logger.Debugf("Player [%s] leaves lobby [%s]", playerId, lobbyId)
 	player, err := core.getPlayer(tx, playerId)
 	if err != nil {
 		return err
 	}
 
+	if player == nil {
+		context.Logger.Debugf("No player for id [%s] found", playerId)
+		return nil
+	}
+
 	if player.LobbyId != lobbyId {
+		context.Logger.Debugf("Lobby id [%s] from player doesent match id [%s] from request", player.LobbyId, lobbyId)
 		return nil
 	}
 
@@ -224,12 +231,15 @@ func (core CoreFacade) leaveLobby(context *util.Context, tx db.DBTx, lobbyId uui
 	}
 
 	if lobby.Owner.ID == playerId {
+		context.Logger.Debugf("Player who is leaving is also owner of lobby [%s]", lobbyId)
 		foundNewOwner := findPlayerNot(lobby.Players, playerId)
 		if foundNewOwner == nil {
+			context.Logger.Debugf("No new owner found. Deleting lobby [%s]", lobbyId)
 			if err := core.deleteLobby(tx, lobbyId); err != nil {
 				return err
 			}
 		} else {
+			context.Logger.Debugf("Player [%s] found to be the new owner of lobby [%s]", foundNewOwner.ID, lobbyId)
 			lobby.Owner = foundNewOwner
 			if err := core.updateLobby(tx, lobby); err != nil {
 				return err
@@ -237,10 +247,12 @@ func (core CoreFacade) leaveLobby(context *util.Context, tx db.DBTx, lobbyId uui
 		}
 	}
 
+	context.Logger.Debugf("Delete player [%s]", playerId)
 	if err := tx.DeletePlayer(playerId); err != nil {
 		return fmt.Errorf("something went wrong while deleting player %v from database: %v", playerId, err)
 	}
 
+	context.Logger.Debugf("Remove player [%s] from lobby chat [%s]", playerId, lobbyId)
 	if err := core.chatAdapter.DeletePlayerFromChat(context, lobbyId, playerId); err != nil {
 		return fmt.Errorf("error while deleting player from chat: %v", err)
 	}
