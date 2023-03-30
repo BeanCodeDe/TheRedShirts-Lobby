@@ -6,9 +6,9 @@ import (
 	"net/http"
 
 	"github.com/BeanCodeDe/TheRedShirts-Lobby/internal/app/theredshirts/core"
+	"github.com/BeanCodeDe/TheRedShirts-Lobby/internal/app/theredshirts/util"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	log "github.com/sirupsen/logrus"
 )
 
 const lobby_root_path = "/lobby"
@@ -62,13 +62,14 @@ func initLobbyInterface(group *echo.Group, api *EchoApi) {
 }
 
 func (api *EchoApi) createLobbyId(context echo.Context) error {
-	logger := context.Get(logger_key).(*log.Entry)
+	logger := context.Get(context_key).(*util.Context).Logger
 	logger.Debug("Create lobby Id")
 	return context.String(http.StatusCreated, uuid.NewString())
 }
 
 func (api *EchoApi) createLobby(context echo.Context) error {
-	logger := context.Get(logger_key).(*log.Entry)
+	customContext := context.Get(context_key).(*util.Context)
+	logger := customContext.Logger
 	logger.Debug("Create lobby")
 
 	lobby, lobbyId, err := bindLobbyCreationDTO(context)
@@ -77,9 +78,8 @@ func (api *EchoApi) createLobby(context echo.Context) error {
 		logger.Warnf("Error while binding lobby: %v", err)
 		return echo.ErrBadRequest
 	}
-
 	coreLobby := mapLobbyCreateToCoreLobby(lobby, lobbyId)
-	err = api.core.CreateLobby(coreLobby)
+	err = api.core.CreateLobby(customContext, coreLobby)
 
 	if err != nil {
 		logger.Warnf("Error while creating lobby: %v", err)
@@ -90,7 +90,7 @@ func (api *EchoApi) createLobby(context echo.Context) error {
 }
 
 func (api *EchoApi) updateLobby(context echo.Context) error {
-	logger := context.Get(logger_key).(*log.Entry)
+	logger := context.Get(context_key).(*util.Context).Logger
 	logger.Debug("Update lobby")
 
 	lobby, lobbyId, err := bindLobbyUpdateDTO(context)
@@ -112,7 +112,7 @@ func (api *EchoApi) updateLobby(context echo.Context) error {
 }
 
 func (api *EchoApi) deleteLobby(context echo.Context) error {
-	logger := context.Get(logger_key).(*log.Entry)
+	logger := context.Get(context_key).(*util.Context).Logger
 	logger.Debug("Delete lobby")
 
 	lobbyId, err := getLobbyId(context)
@@ -130,7 +130,7 @@ func (api *EchoApi) deleteLobby(context echo.Context) error {
 }
 
 func (api *EchoApi) getAllLobbies(context echo.Context) error {
-	logger := context.Get(logger_key).(*log.Entry)
+	logger := context.Get(context_key).(*util.Context).Logger
 	logger.Debug("Get all lobbies")
 
 	lobbies, err := api.core.GetLobbies()
@@ -142,7 +142,7 @@ func (api *EchoApi) getAllLobbies(context echo.Context) error {
 }
 
 func (api *EchoApi) getLobby(context echo.Context) error {
-	logger := context.Get(logger_key).(*log.Entry)
+	logger := context.Get(context_key).(*util.Context).Logger
 	logger.Debug("Get lobby")
 
 	lobbyId, err := getLobbyId(context)
@@ -160,7 +160,8 @@ func (api *EchoApi) getLobby(context echo.Context) error {
 }
 
 func (api *EchoApi) joinLobby(context echo.Context) error {
-	logger := context.Get(logger_key).(*log.Entry)
+	customContext := context.Get(context_key).(*util.Context)
+	logger := customContext.Logger
 	logger.Debug("Join lobby")
 
 	joinLobby, lobbyId, playerId, err := bindLobbyJoinDTO(context)
@@ -169,7 +170,7 @@ func (api *EchoApi) joinLobby(context echo.Context) error {
 		return echo.ErrBadRequest
 	}
 
-	err = api.core.JoinLobby(mapLobbyJoinToCoreJoin(joinLobby, lobbyId, playerId))
+	err = api.core.JoinLobby(customContext, mapLobbyJoinToCoreJoin(joinLobby, lobbyId, playerId))
 
 	if err != nil {
 		if errors.Is(err, core.ErrWrongLobbyPassword) {
@@ -184,7 +185,8 @@ func (api *EchoApi) joinLobby(context echo.Context) error {
 }
 
 func (api *EchoApi) leaveLobby(context echo.Context) error {
-	logger := context.Get(logger_key).(*log.Entry)
+	customContext := context.Get(context_key).(*util.Context)
+	logger := customContext.Logger
 	logger.Debug("Leave lobby")
 
 	playerId, err := getPlayerId(context)
@@ -199,7 +201,7 @@ func (api *EchoApi) leaveLobby(context echo.Context) error {
 		return echo.ErrBadRequest
 	}
 
-	if err = api.core.LeaveLobby(lobbbyId, playerId); err != nil {
+	if err = api.core.LeaveLobby(customContext, lobbbyId, playerId); err != nil {
 		logger.Warnf("Error while player leaving lobyy: %v", err)
 		return echo.ErrInternalServerError
 	}
@@ -309,12 +311,12 @@ func mapToPlayer(player *core.Player) *Player {
 	if player == nil {
 		return nil
 	}
-	return &Player{ID: player.ID, Name: player.Name}
+	return &Player{ID: player.ID, Name: player.Name, Team: player.Team}
 }
 
 func mapToCorePlayer(player *Player) *core.Player {
 	if player == nil {
 		return nil
 	}
-	return &core.Player{ID: player.ID, Name: player.Name}
+	return &core.Player{ID: player.ID, Name: player.Name, Team: player.Team}
 }

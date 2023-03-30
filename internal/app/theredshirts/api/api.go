@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	logger_key            = "logger"
+	context_key           = "context"
 	correlation_id_header = "X-Correlation-ID"
 )
 
@@ -38,7 +38,7 @@ func NewApi() (Api, error) {
 	echoApi := &EchoApi{core: core}
 	e := echo.New()
 	e.AutoTLSManager.Cache = autocert.DirCache("/var/www/.cache")
-	e.Use(middleware.CORS(), setLoggerMiddleware, middleware.Recover())
+	e.Use(middleware.CORS(), setContextMiddleware, middleware.Recover())
 	e.Validator = &CustomValidator{validator: validator.New()}
 
 	serverGroup := e.Group(server_root_path)
@@ -62,19 +62,19 @@ func (cv *CustomValidator) Validate(i interface{}) error {
 	return cv.validator.Struct(i)
 }
 
-func setLoggerMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+func setContextMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		correlationId := c.Request().Header.Get(correlation_id_header)
 		_, err := uuid.Parse(correlationId)
 		if err != nil {
-			log.Warn("Correlation id is not from format uuid. Set default correlation id. Error: %v", err)
+			log.Warnf("Correlation id is not from format uuid. Set default correlation id. Error: %v", err)
 			correlationId = "WRONG FORMAT"
 		}
 		logger := log.WithFields(log.Fields{
 			correlation_id_header: correlationId,
 		})
 
-		c.Set(logger_key, logger)
+		c.Set(context_key, &util.Context{CorrelationId: correlationId, Logger: logger})
 		return next(c)
 	}
 }

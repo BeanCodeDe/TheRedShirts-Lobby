@@ -3,8 +3,8 @@ package api
 import (
 	"net/http"
 
+	"github.com/BeanCodeDe/TheRedShirts-Lobby/internal/app/theredshirts/util"
 	"github.com/labstack/echo/v4"
-	log "github.com/sirupsen/logrus"
 )
 
 const server_root_path = "/server"
@@ -14,7 +14,7 @@ func initServerInterface(group *echo.Group, api *EchoApi) {
 }
 
 func (api *EchoApi) ping(context echo.Context) error {
-	logger := context.Get(logger_key).(*log.Entry)
+	logger := context.Get(context_key).(*util.Context).Logger
 	logger.Debug("Ping server")
 	return context.NoContent(http.StatusNoContent)
 }

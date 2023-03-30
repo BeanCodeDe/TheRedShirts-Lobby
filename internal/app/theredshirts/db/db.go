@@ -11,11 +11,16 @@ import (
 
 type (
 	Lobby struct {
-		ID         uuid.UUID `db:"id"`
-		Name       string    `db:"name"`
-		Owner      uuid.UUID `db:"owner"`
-		Password   string    `db:"password"`
-		Difficulty string    `db:"difficulty"`
+		ID             uuid.UUID `db:"id"`
+		Status         string    `db:"status"`
+		Name           string    `db:"name"`
+		Owner          uuid.UUID `db:"owner"`
+		Password       string    `db:"password"`
+		Difficulty     int       `db:"difficulty"`
+		MissionLength  int       `db:"mission_length"`
+		CrewMembers    int       `db:"crew_members"`
+		MaxPlayers     int       `db:"max_players"`
+		ExpansionPacks []string  `db:"expansion_packs"`
 	}
 
 	Player struct {

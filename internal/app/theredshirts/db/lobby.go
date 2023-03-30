@@ -13,12 +13,12 @@ import (
 
 const (
 	lobby_table_name       = "lobby"
-	create_lobby_sql       = "INSERT INTO %s.%s(id, name, owner, password, difficulty) VALUES($1, $2, $3, $4, $5)"
-	update_lobby_sql       = "UPDATE %s.%s SET name = $2, owner = $3, password = $4, difficulty = $5 WHERE id = $1"
+	create_lobby_sql       = "INSERT INTO %s.%s(id, status, name, owner, password, difficulty, mission_length, crew_members, max_players, expansion_packs) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"
+	update_lobby_sql       = "UPDATE %s.%s SET status = $2, name = $3, owner = $4, password = $5, difficulty = $6, mission_length = $7, crew_members = $8, max_players = $9, expansion_packs = $10 WHERE id = $1"
 	delete_lobby_sql       = "DELETE FROM %s.%s WHERE id = $1"
 	delete_empty_lobby_sql = "DELETE FROM %s.%s WHERE NOT EXISTS (SELECT 1 FROM %s.%s AS p WHERE p.lobby_id = lobby.id)"
-	select_lobby_by_id_sql = "SELECT id, name, owner, password, difficulty FROM %s.%s WHERE id = $1"
-	select_lobby_sql       = "SELECT id, name, owner, password, difficulty FROM %s.%s"
+	select_lobby_by_id_sql = "SELECT id, status, name, owner, password, difficulty, mission_length, crew_members, max_players, expansion_packs FROM %s.%s WHERE id = $1"
+	select_lobby_sql       = "SELECT id, status, name, owner, password, difficulty, mission_length, crew_members, max_players, expansion_packs FROM %s.%s"
 )
 
 var (

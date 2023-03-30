@@ -5,18 +5,22 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/BeanCodeDe/TheRedShirts-Lobby/internal/app/theredshirts/adapter"
 	"github.com/BeanCodeDe/TheRedShirts-Lobby/internal/app/theredshirts/db"
+	"github.com/BeanCodeDe/TheRedShirts-Lobby/internal/app/theredshirts/util"
 	"github.com/google/uuid"
 )
 
-func (core CoreFacade) CreateLobby(lobby *Lobby) error {
-	dbLobby := mapToDBLobby(lobby)
-
+func (core CoreFacade) CreateLobby(context *util.Context, lobby *Lobby) error {
 	tx, err := core.db.StartTransaction()
 	defer tx.HandleTransaction(err)
-	if err != nil {
-		return fmt.Errorf("something went wrong while creating transaction: %v", err)
-	}
+	err = core.createLobby(tx, context, lobby)
+	return err
+}
+
+func (core CoreFacade) createLobby(tx db.DBTx, context *util.Context, lobby *Lobby) error {
+	dbLobby := mapToDBLobby(lobby)
+
 	if err := tx.CreateLobby(dbLobby); err != nil {
 		if !errors.Is(err, db.ErrLobbyAlreadyExists) {
 			return fmt.Errorf("error while creating lobby: %v", err)
@@ -32,7 +36,7 @@ func (core CoreFacade) CreateLobby(lobby *Lobby) error {
 
 	}
 
-	if err := core.joinLobby(tx, lobby.Owner.ID, lobby.Owner.Name, lobby.Owner.Team, lobby.ID, lobby.Password); err != nil {
+	if err := core.joinLobby(context, tx, lobby.Owner.ID, lobby.Owner.Name, lobby.Owner.Team, lobby.ID, lobby.Password); err != nil {
 		return err
 	}
 
@@ -139,17 +143,17 @@ func (core CoreFacade) GetLobbies() ([]*Lobby, error) {
 	return coreLobbies, nil
 }
 
-func (core CoreFacade) JoinLobby(join *Join) error {
+func (core CoreFacade) JoinLobby(context *util.Context, join *Join) error {
 	tx, err := core.db.StartTransaction()
 	defer tx.HandleTransaction(err)
 	if err != nil {
 		return fmt.Errorf("something went wrong while creating transaction: %v", err)
 	}
-	err = core.joinLobby(tx, join.PlayerId, join.Name, join.Team, join.LobbyID, join.Password)
+	err = core.joinLobby(context, tx, join.PlayerId, join.Name, join.Team, join.LobbyID, join.Password)
 	return err
 }
 
-func (core CoreFacade) joinLobby(tx db.DBTx, playerId uuid.UUID, playerName string, teamName string, lobbyId uuid.UUID, password string) error {
+func (core CoreFacade) joinLobby(context *util.Context, tx db.DBTx, playerId uuid.UUID, playerName string, teamName string, lobbyId uuid.UUID, password string) error {
 
 	player, err := core.getPlayer(tx, playerId)
 	if err != nil {
@@ -158,7 +162,7 @@ func (core CoreFacade) joinLobby(tx db.DBTx, playerId uuid.UUID, playerName stri
 
 	if player != nil {
 		if lobbyId != player.LobbyId {
-			if err := core.LeaveLobby(lobbyId, playerId); err != nil {
+			if err := core.leaveLobby(context, tx, lobbyId, playerId); err != nil {
 				return err
 			}
 		} else {
@@ -181,19 +185,21 @@ func (core CoreFacade) joinLobby(tx db.DBTx, playerId uuid.UUID, playerName stri
 	if err := tx.CreatePlayer(&db.Player{ID: playerId, Name: playerName, Team: teamName, LobbyId: lobbyId, LastRefresh: time.Now()}); err != nil {
 		return fmt.Errorf("something went wrong while creating player %v from database: %v", playerId, err)
 	}
-
+	if err := core.chatAdapter.AddPlayerToChat(context, lobbyId, playerId, &adapter.PlayerCreate{Name: playerName, Team: teamName}); err != nil {
+		return fmt.Errorf("error while adding player to chat: %v", err)
+	}
 	return nil
 }
 
-func (core CoreFacade) LeaveLobby(lobbyId uuid.UUID, playerId uuid.UUID) error {
+func (core CoreFacade) LeaveLobby(context *util.Context, lobbyId uuid.UUID, playerId uuid.UUID) error {
 	tx, err := core.db.StartTransaction()
 	defer tx.HandleTransaction(err)
 
-	err = core.leaveLobby(tx, lobbyId, playerId)
+	err = core.leaveLobby(context, tx, lobbyId, playerId)
 	return err
 }
 
-func (core CoreFacade) leaveLobby(tx db.DBTx, lobbyId uuid.UUID, playerId uuid.UUID) error {
+func (core CoreFacade) leaveLobby(context *util.Context, tx db.DBTx, lobbyId uuid.UUID, playerId uuid.UUID) error {
 	player, err := core.getPlayer(tx, playerId)
 	if err != nil {
 		return err
@@ -224,6 +230,10 @@ func (core CoreFacade) leaveLobby(tx db.DBTx, lobbyId uuid.UUID, playerId uuid.U
 
 	if err := tx.DeletePlayer(playerId); err != nil {
 		return fmt.Errorf("something went wrong while deleting player %v from database: %v", playerId, err)
+	}
+
+	if err := core.chatAdapter.DeletePlayerFromChat(context, lobbyId, playerId); err != nil {
+		return fmt.Errorf("error while deleting player from chat: %v", err)
 	}
 	return nil
 }

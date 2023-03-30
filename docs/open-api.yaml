@@ -281,3 +281,5 @@ components:
           format: uuid
         name:
           type: string
+        team:
+          type: string

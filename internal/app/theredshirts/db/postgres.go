@@ -41,13 +41,14 @@ func newPostgresConnection() (DB, error) {
 	host := util.GetEnvWithFallback("POSTGRES_HOST", "postgres")
 	port, err := util.GetEnvIntWithFallback("POSTGRES_PORT", 5432)
 	options := util.GetEnvWithFallback("POSTGRES_OPTIONS", "sslmode=disable")
+	migrationOptions := util.GetEnvWithFallback("POSTGRES_MIGRATION_OPTIONS", "&x-migrations-table=theredshirts-lobby")
 
 	if err != nil {
 		return nil, fmt.Errorf("port is not a number: %v", err)
 	}
 
 	url := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?%s", user, password, host, port, dbName, options)
-	err = migratePostgresDatabase(url)
+	err = migratePostgresDatabase(url + migrationOptions)
 	if err != nil {
 		return nil, fmt.Errorf("error while migrating database: %v", err)
 	}

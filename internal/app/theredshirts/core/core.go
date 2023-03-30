@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/BeanCodeDe/TheRedShirts-Lobby/internal/app/theredshirts/adapter"
 	"github.com/BeanCodeDe/TheRedShirts-Lobby/internal/app/theredshirts/db"
+	"github.com/BeanCodeDe/TheRedShirts-Lobby/internal/app/theredshirts/util"
 	"github.com/google/uuid"
 )
 
@@ -13,17 +15,18 @@ type (
 
 	//Facade
 	CoreFacade struct {
-		db db.DB
+		db          db.DB
+		chatAdapter adapter.ChatAdapter
 	}
 
 	Core interface {
-		CreateLobby(lobby *Lobby) error
+		CreateLobby(context *util.Context, lobby *Lobby) error
 		GetLobby(lobbyId uuid.UUID) (*Lobby, error)
 		UpdateLobby(lobby *Lobby) error
 		GetLobbies() ([]*Lobby, error)
 		DeleteLobby(lobbyId uuid.UUID) error
-		JoinLobby(join *Join) error
-		LeaveLobby(lobbyId uuid.UUID, playerId uuid.UUID) error
+		JoinLobby(context *util.Context, join *Join) error
+		LeaveLobby(context *util.Context, lobbyId uuid.UUID, playerId uuid.UUID) error
 	}
 
 	//Objects
@@ -62,7 +65,8 @@ func NewCore() (Core, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error while initializing database: %v", err)
 	}
-	core := &CoreFacade{db: db}
+	chatAdapter := adapter.NewChatAdapter()
+	core := &CoreFacade{db: db, chatAdapter: *chatAdapter}
 	core.startCleanUp()
 	return core, nil
 }
