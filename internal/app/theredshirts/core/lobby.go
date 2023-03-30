@@ -14,6 +14,7 @@ import (
 func (core CoreFacade) CreateLobby(context *util.Context, lobby *Lobby) error {
 	tx, err := core.db.StartTransaction()
 	defer tx.HandleTransaction(err)
+	lobby.Status = lobby_open
 	err = core.createLobby(tx, context, lobby)
 	return err
 }
@@ -56,10 +57,18 @@ func (core CoreFacade) updateLobby(tx db.DBTx, lobby *Lobby) error {
 		return fmt.Errorf("something went wrong while loading lobby [%v] from database: %v", lobby.ID, err)
 	}
 
+	if dbLobby.Status == lobby_playing {
+		return fmt.Errorf("can not change lobby when status is playing")
+	}
+
 	dbLobby.Name = lobby.Name
 	dbLobby.Difficulty = lobby.Difficulty
 	dbLobby.Owner = lobby.Owner.ID
 	dbLobby.Password = lobby.Password
+	dbLobby.MissionLength = lobby.MissionLength
+	dbLobby.CrewMembers = lobby.CrewMembers
+	dbLobby.MaxPlayers = lobby.MaxPlayers
+	dbLobby.ExpansionPacks = lobby.ExpansionPacks
 
 	if err := tx.UpdateLobby(dbLobby); err != nil {
 		if err != nil {
@@ -239,9 +248,9 @@ func (core CoreFacade) leaveLobby(context *util.Context, tx db.DBTx, lobbyId uui
 }
 
 func mapToDBLobby(lobby *Lobby) *db.Lobby {
-	return &db.Lobby{ID: lobby.ID, Name: lobby.Name, Owner: lobby.Owner.ID, Password: lobby.Password, Difficulty: lobby.Difficulty}
+	return &db.Lobby{ID: lobby.ID, Status: lobby.Status, Name: lobby.Name, Owner: lobby.Owner.ID, Password: lobby.Password, Difficulty: lobby.Difficulty, MissionLength: lobby.MissionLength, CrewMembers: lobby.CrewMembers, MaxPlayers: lobby.MaxPlayers, ExpansionPacks: lobby.ExpansionPacks}
 }
 
 func mapToLobby(lobby *db.Lobby, owner *Player, players []*Player) *Lobby {
-	return &Lobby{ID: lobby.ID, Name: lobby.Name, Owner: owner, Password: lobby.Password, Difficulty: lobby.Difficulty, Players: players}
+	return &Lobby{ID: lobby.ID, Status: lobby.Status, Name: lobby.Name, Owner: owner, Password: lobby.Password, Difficulty: lobby.Difficulty, MissionLength: lobby.MissionLength, CrewMembers: lobby.CrewMembers, MaxPlayers: lobby.MaxPlayers, ExpansionPacks: lobby.ExpansionPacks, Players: players}
 }

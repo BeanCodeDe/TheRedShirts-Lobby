@@ -31,12 +31,17 @@ type (
 
 	//Objects
 	Lobby struct {
-		ID         uuid.UUID
-		Name       string
-		Owner      *Player
-		Password   string
-		Difficulty string
-		Players    []*Player
+		ID             uuid.UUID
+		Status         string
+		Name           string
+		Owner          *Player
+		Password       string
+		Difficulty     int
+		MissionLength  int
+		CrewMembers    int
+		MaxPlayers     int
+		ExpansionPacks []string
+		Players        []*Player
 	}
 
 	Join struct {
@@ -54,6 +59,11 @@ type (
 		LastRefresh time.Time
 		LobbyId     uuid.UUID
 	}
+)
+
+const (
+	lobby_open    = "OPEN"
+	lobby_playing = "PLAYING"
 )
 
 var (

@@ -17,16 +17,24 @@ const player_id_param = "playerId"
 
 type (
 	LobbyCreate struct {
-		Name       string  `json:"name" validate:"required"`
-		Owner      *Player `json:"owner" validate:"required"`
-		Password   string  `json:"password"`
-		Difficulty string  `json:"difficulty" validate:"required"`
+		Name           string   `json:"name" validate:"required"`
+		Owner          *Player  `json:"owner" validate:"required"`
+		Password       string   `json:"password"`
+		Difficulty     int      `json:"difficulty" validate:"required"`
+		MissionLength  int      `json:"mission_length" validate:"required"`
+		CrewMembers    int      `json:"crew_members" validate:"required"`
+		MaxPlayers     int      `json:"max_players" validate:"required"`
+		ExpansionPacks []string `json:"expansion_packs" `
 	}
 
 	LobbyUpdate struct {
-		Name       string `validate:"required"`
-		Password   string
-		Difficulty string `validate:"required"`
+		Name           string   `json:"name" validate:"required"`
+		Password       string   `json:"password"`
+		Difficulty     int      `json:"difficulty" validate:"required"`
+		MissionLength  int      `json:"mission_length" validate:"required"`
+		CrewMembers    int      `json:"crew_members" validate:"required"`
+		MaxPlayers     int      `json:"max_players" validate:"required"`
+		ExpansionPacks []string `json:"expansion_packs" `
 	}
 
 	LobbyJoin struct {
@@ -36,11 +44,16 @@ type (
 	}
 
 	Lobby struct {
-		ID         uuid.UUID `json:"id"`
-		Name       string    `json:"name"`
-		Owner      *Player   `json:"owner"`
-		Difficulty string    `json:"difficulty"`
-		Players    []*Player `json:"players"`
+		ID             uuid.UUID `json:"id"`
+		Name           string    `json:"name"`
+		Status         string    `json:"status"`
+		Owner          *Player   `json:"owner"`
+		Difficulty     int       `json:"difficulty"`
+		MissionLength  int       `json:"mission_length"`
+		CrewMembers    int       `json:"crew_members" `
+		MaxPlayers     int       `json:"max_players" `
+		ExpansionPacks []string  `json:"expansion_packs" `
+		Players        []*Player `json:"players"`
 	}
 
 	Player struct {
@@ -280,7 +293,7 @@ func mapLobbyJoinToCoreJoin(lobbyJoin *LobbyJoin, lobbyId uuid.UUID, playerId uu
 }
 
 func mapLobbyCreateToCoreLobby(lobby *LobbyCreate, lobbyId uuid.UUID) *core.Lobby {
-	return &core.Lobby{ID: lobbyId, Name: lobby.Name, Owner: mapToCorePlayer(lobby.Owner), Password: lobby.Password, Difficulty: lobby.Difficulty}
+	return &core.Lobby{ID: lobbyId, Name: lobby.Name, Owner: mapToCorePlayer(lobby.Owner), Password: lobby.Password, Difficulty: lobby.Difficulty, MissionLength: lobby.MissionLength, CrewMembers: lobby.CrewMembers, MaxPlayers: lobby.MaxPlayers, ExpansionPacks: lobby.ExpansionPacks}
 }
 
 func mapLobbyUpdateToCoreLobby(lobby *LobbyUpdate, lobbyId uuid.UUID) *core.Lobby {
@@ -288,7 +301,7 @@ func mapLobbyUpdateToCoreLobby(lobby *LobbyUpdate, lobbyId uuid.UUID) *core.Lobb
 }
 
 func mapToLobby(lobby *core.Lobby) *Lobby {
-	return &Lobby{ID: lobby.ID, Name: lobby.Name, Owner: mapToPlayer(lobby.Owner), Difficulty: lobby.Difficulty, Players: mapToPlayers(lobby.Players)}
+	return &Lobby{ID: lobby.ID, Status: lobby.Status, Name: lobby.Name, Owner: mapToPlayer(lobby.Owner), Difficulty: lobby.Difficulty, MissionLength: lobby.MissionLength, CrewMembers: lobby.CrewMembers, MaxPlayers: lobby.MaxPlayers, ExpansionPacks: lobby.ExpansionPacks, Players: mapToPlayers(lobby.Players)}
 }
 
 func mapToLobbies(coreLobbies []*core.Lobby) []*Lobby {
