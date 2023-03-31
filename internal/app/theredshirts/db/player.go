@@ -14,13 +14,13 @@ import (
 
 const (
 	player_table_name              = "player"
-	create_player_sql              = "INSERT INTO %s.%s(id, name, team, lobby_id, last_refresh) VALUES($1, $2, $3, $4, $5)"
-	update_player_sql              = "UPDATE %s.%s SET name = $2, team = $3, lobbyid = $4, last_refresh = $5 WHERE id = $1"
+	create_player_sql              = "INSERT INTO %s.%s(id, name, lobby_id, last_refresh, payload) VALUES($1, $2, $3, $4, $5)"
+	update_player_sql              = "UPDATE %s.%s SET name = $2, lobbyid = $3, last_refresh = $4, payload = $5  WHERE id = $1"
 	delete_player_sql              = "DELETE FROM %s.%s WHERE id = $1"
 	delete_player_in_lobby_sql     = "DELETE FROM %s.%s WHERE lobby_id = $1"
 	delete_player_older_then_sql   = "DELETE FROM %s.%s WHERE last_refresh < $1"
-	select_player_by_player_id_sql = "SELECT id, name, team, lobby_id FROM %s.%s WHERE id = $1"
-	select_player_by_lobby_id_sql  = "SELECT id, name, team, lobby_id FROM %s.%s WHERE lobby_id = $1"
+	select_player_by_player_id_sql = "SELECT id, name, crew_members, lobby_id FROM %s.%s WHERE id = $1"
+	select_player_by_lobby_id_sql  = "SELECT id, name, crew_members, lobby_id FROM %s.%s WHERE lobby_id = $1"
 )
 
 var (
@@ -28,7 +28,7 @@ var (
 )
 
 func (tx *postgresTransaction) CreatePlayer(player *Player) error {
-	if _, err := tx.tx.Exec(context.Background(), fmt.Sprintf(create_player_sql, schema_name, player_table_name), player.ID, player.Name, player.Team, player.LobbyId, player.LastRefresh); err != nil {
+	if _, err := tx.tx.Exec(context.Background(), fmt.Sprintf(create_player_sql, schema_name, player_table_name), player.ID, player.Name, player.LobbyId, player.LastRefresh, player.Payload); err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			switch pgErr.Code {
@@ -43,7 +43,7 @@ func (tx *postgresTransaction) CreatePlayer(player *Player) error {
 }
 
 func (tx *postgresTransaction) UpdatePlayer(player *Player) error {
-	if _, err := tx.tx.Exec(context.Background(), fmt.Sprintf(update_player_sql, schema_name, player_table_name), player.ID, player.Name, player.Team, player.LobbyId, player.LastRefresh); err != nil {
+	if _, err := tx.tx.Exec(context.Background(), fmt.Sprintf(update_player_sql, schema_name, player_table_name), player.ID, player.Name, player.LobbyId, player.LastRefresh, player.Payload); err != nil {
 		return fmt.Errorf("unknown error when updating player: %v", err)
 	}
 	return nil

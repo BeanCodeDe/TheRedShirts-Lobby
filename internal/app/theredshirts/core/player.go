@@ -19,7 +19,7 @@ func mapToPlayer(player *db.Player) *Player {
 	if player == nil {
 		return nil
 	}
-	return &Player{ID: player.ID, Name: player.Name, Team: player.Team, LastRefresh: player.LastRefresh, LobbyId: player.LobbyId}
+	return &Player{ID: player.ID, Name: player.Name, LastRefresh: player.LastRefresh, LobbyId: player.LobbyId, Payload: player.Payload}
 }
 
 func mapToPlayers(dbPlayers []*db.Player) []*Player {
@@ -31,7 +31,7 @@ func mapToPlayers(dbPlayers []*db.Player) []*Player {
 }
 
 func mapToDBPlayer(player *Player, lobbyId uuid.UUID) *db.Player {
-	return &db.Player{ID: player.ID, Name: player.Name, Team: player.Team, LobbyId: lobbyId}
+	return &db.Player{ID: player.ID, Name: player.Name, LobbyId: lobbyId, Payload: player.Payload}
 }
 
 func findPlayerNot(players []*Player, notPlayerId uuid.UUID) *Player {

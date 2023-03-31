@@ -11,15 +11,15 @@ import (
 	"github.com/google/uuid"
 )
 
-func (core CoreFacade) CreateLobby(context *util.Context, lobby *Lobby) error {
+func (core CoreFacade) CreateLobby(context *util.Context, lobby *Lobby, playerPayload map[string]interface{}) error {
 	tx, err := core.db.StartTransaction()
 	defer tx.HandleTransaction(err)
 	lobby.Status = lobby_open
-	err = core.createLobby(tx, context, lobby)
+	err = core.createLobby(tx, context, lobby, playerPayload)
 	return err
 }
 
-func (core CoreFacade) createLobby(tx db.DBTx, context *util.Context, lobby *Lobby) error {
+func (core CoreFacade) createLobby(tx db.DBTx, context *util.Context, lobby *Lobby, playerPayload map[string]interface{}) error {
 	dbLobby := mapToDBLobby(lobby)
 
 	if err := tx.CreateLobby(dbLobby); err != nil {
@@ -37,7 +37,7 @@ func (core CoreFacade) createLobby(tx db.DBTx, context *util.Context, lobby *Lob
 
 	}
 
-	if err := core.joinLobby(context, tx, lobby.Owner.ID, lobby.Owner.Name, lobby.Owner.Team, lobby.ID, lobby.Password); err != nil {
+	if err := core.joinLobby(context, tx, lobby.Owner.ID, lobby.Owner.Name, lobby.ID, lobby.Password, playerPayload); err != nil {
 		return err
 	}
 
@@ -66,9 +66,10 @@ func (core CoreFacade) updateLobby(tx db.DBTx, lobby *Lobby) error {
 	dbLobby.Owner = lobby.Owner.ID
 	dbLobby.Password = lobby.Password
 	dbLobby.MissionLength = lobby.MissionLength
-	dbLobby.CrewMembers = lobby.CrewMembers
+	dbLobby.NumberOfCrewMembers = lobby.NumberOfCrewMembers
 	dbLobby.MaxPlayers = lobby.MaxPlayers
 	dbLobby.ExpansionPacks = lobby.ExpansionPacks
+	dbLobby.Payload = lobby.Payload
 
 	if err := tx.UpdateLobby(dbLobby); err != nil {
 		if err != nil {
@@ -158,11 +159,11 @@ func (core CoreFacade) JoinLobby(context *util.Context, join *Join) error {
 	if err != nil {
 		return fmt.Errorf("something went wrong while creating transaction: %v", err)
 	}
-	err = core.joinLobby(context, tx, join.PlayerId, join.Name, join.Team, join.LobbyID, join.Password)
+	err = core.joinLobby(context, tx, join.PlayerId, join.Name, join.LobbyID, join.Password, join.Payload)
 	return err
 }
 
-func (core CoreFacade) joinLobby(context *util.Context, tx db.DBTx, playerId uuid.UUID, playerName string, teamName string, lobbyId uuid.UUID, password string) error {
+func (core CoreFacade) joinLobby(context *util.Context, tx db.DBTx, playerId uuid.UUID, playerName string, lobbyId uuid.UUID, password string, payload map[string]interface{}) error {
 
 	player, err := core.getPlayer(tx, playerId)
 	if err != nil {
@@ -176,7 +177,7 @@ func (core CoreFacade) joinLobby(context *util.Context, tx db.DBTx, playerId uui
 			}
 		} else {
 			player.LastRefresh = time.Now()
-			player.Team = teamName
+			player.Payload = player.Payload
 			if err := tx.UpdatePlayer(mapToDBPlayer(player, lobbyId)); err != nil {
 				return fmt.Errorf("something went wrong while creating player %v from database: %v", playerId, err)
 			}
@@ -191,10 +192,10 @@ func (core CoreFacade) joinLobby(context *util.Context, tx db.DBTx, playerId uui
 	if lobby.Password != password {
 		return ErrWrongLobbyPassword
 	}
-	if err := tx.CreatePlayer(&db.Player{ID: playerId, Name: playerName, Team: teamName, LobbyId: lobbyId, LastRefresh: time.Now()}); err != nil {
+	if err := tx.CreatePlayer(&db.Player{ID: playerId, Name: playerName, LobbyId: lobbyId, LastRefresh: time.Now(), Payload: payload}); err != nil {
 		return fmt.Errorf("something went wrong while creating player %v from database: %v", playerId, err)
 	}
-	if err := core.chatAdapter.AddPlayerToChat(context, lobbyId, playerId, &adapter.PlayerCreate{Name: playerName, Team: teamName}); err != nil {
+	if err := core.chatAdapter.AddPlayerToChat(context, lobbyId, playerId, &adapter.PlayerCreate{Name: playerName}); err != nil {
 		return fmt.Errorf("error while adding player to chat: %v", err)
 	}
 	return nil
@@ -260,9 +261,9 @@ func (core CoreFacade) leaveLobby(context *util.Context, tx db.DBTx, lobbyId uui
 }
 
 func mapToDBLobby(lobby *Lobby) *db.Lobby {
-	return &db.Lobby{ID: lobby.ID, Status: lobby.Status, Name: lobby.Name, Owner: lobby.Owner.ID, Password: lobby.Password, Difficulty: lobby.Difficulty, MissionLength: lobby.MissionLength, CrewMembers: lobby.CrewMembers, MaxPlayers: lobby.MaxPlayers, ExpansionPacks: lobby.ExpansionPacks}
+	return &db.Lobby{ID: lobby.ID, Status: lobby.Status, Name: lobby.Name, Owner: lobby.Owner.ID, Password: lobby.Password, Difficulty: lobby.Difficulty, MissionLength: lobby.MissionLength, NumberOfCrewMembers: lobby.NumberOfCrewMembers, MaxPlayers: lobby.MaxPlayers, ExpansionPacks: lobby.ExpansionPacks, Payload: lobby.Payload}
 }
 
 func mapToLobby(lobby *db.Lobby, owner *Player, players []*Player) *Lobby {
-	return &Lobby{ID: lobby.ID, Status: lobby.Status, Name: lobby.Name, Owner: owner, Password: lobby.Password, Difficulty: lobby.Difficulty, MissionLength: lobby.MissionLength, CrewMembers: lobby.CrewMembers, MaxPlayers: lobby.MaxPlayers, ExpansionPacks: lobby.ExpansionPacks, Players: players}
+	return &Lobby{ID: lobby.ID, Status: lobby.Status, Name: lobby.Name, Owner: owner, Password: lobby.Password, Difficulty: lobby.Difficulty, MissionLength: lobby.MissionLength, NumberOfCrewMembers: lobby.NumberOfCrewMembers, MaxPlayers: lobby.MaxPlayers, ExpansionPacks: lobby.ExpansionPacks, Players: players, Payload: lobby.Payload}
 }

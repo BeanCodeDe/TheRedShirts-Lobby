@@ -17,49 +17,53 @@ const player_id_param = "playerId"
 
 type (
 	LobbyCreate struct {
-		Name           string   `json:"name" validate:"required"`
-		Owner          *Player  `json:"owner" validate:"required"`
-		Password       string   `json:"password"`
-		Difficulty     int      `json:"difficulty" validate:"required"`
-		MissionLength  int      `json:"mission_length" validate:"required"`
-		CrewMembers    int      `json:"crew_members" validate:"required"`
-		MaxPlayers     int      `json:"max_players" validate:"required"`
-		ExpansionPacks []string `json:"expansion_packs" `
+		Name                string                 `json:"name" validate:"required"`
+		Owner               *Player                `json:"owner" validate:"required"`
+		Password            string                 `json:"password"`
+		Difficulty          int                    `json:"difficulty" validate:"required"`
+		MissionLength       int                    `json:"mission_length" validate:"required"`
+		NumberOfCrewMembers int                    `json:"number_of_crew_members" validate:"required"`
+		MaxPlayers          int                    `json:"max_players" validate:"required"`
+		ExpansionPacks      []string               `json:"expansion_packs"`
+		PlayerPayload       map[string]interface{} `json:"player_payload"`
+		Payload             map[string]interface{} `json:"payload"`
 	}
 
 	LobbyUpdate struct {
-		Name           string   `json:"name" validate:"required"`
-		Password       string   `json:"password"`
-		Difficulty     int      `json:"difficulty" validate:"required"`
-		MissionLength  int      `json:"mission_length" validate:"required"`
-		CrewMembers    int      `json:"crew_members" validate:"required"`
-		MaxPlayers     int      `json:"max_players" validate:"required"`
-		ExpansionPacks []string `json:"expansion_packs" `
+		Name                string                 `json:"name" validate:"required"`
+		Password            string                 `json:"password"`
+		Difficulty          int                    `json:"difficulty" validate:"required"`
+		MissionLength       int                    `json:"mission_length" validate:"required"`
+		NumberOfCrewMembers int                    `json:"number_of_crew_members" validate:"required"`
+		MaxPlayers          int                    `json:"max_players" validate:"required"`
+		ExpansionPacks      []string               `json:"expansion_packs"`
+		Payload             map[string]interface{} `json:"payload"`
 	}
 
 	LobbyJoin struct {
-		Name     string `json:"name" validate:"required"`
-		Team     string `json:"team" validate:"required"`
-		Password string `json:"password"`
+		Name     string                 `json:"name" validate:"required"`
+		Password string                 `json:"password"`
+		Payload  map[string]interface{} `json:"payload"`
 	}
 
 	Lobby struct {
-		ID             uuid.UUID `json:"id"`
-		Name           string    `json:"name"`
-		Status         string    `json:"status"`
-		Owner          *Player   `json:"owner"`
-		Difficulty     int       `json:"difficulty"`
-		MissionLength  int       `json:"mission_length"`
-		CrewMembers    int       `json:"crew_members" `
-		MaxPlayers     int       `json:"max_players" `
-		ExpansionPacks []string  `json:"expansion_packs" `
-		Players        []*Player `json:"players"`
+		ID                  uuid.UUID              `json:"id"`
+		Name                string                 `json:"name"`
+		Status              string                 `json:"status"`
+		Owner               *Player                `json:"owner"`
+		Difficulty          int                    `json:"difficulty"`
+		MissionLength       int                    `json:"mission_length"`
+		NumberOfCrewMembers int                    `json:"number_of_crew_members" `
+		MaxPlayers          int                    `json:"max_players" `
+		ExpansionPacks      []string               `json:"expansion_packs" `
+		Players             []*Player              `json:"players"`
+		Payload             map[string]interface{} `json:"payload"`
 	}
 
 	Player struct {
-		ID   uuid.UUID `json:"id" validate:"required"`
-		Name string    `json:"name" validate:"required"`
-		Team string    `json:"team" validate:"required"`
+		ID      uuid.UUID              `json:"id" validate:"required"`
+		Name    string                 `json:"name" validate:"required"`
+		Payload map[string]interface{} `json:"payload"`
 	}
 )
 
@@ -92,7 +96,7 @@ func (api *EchoApi) createLobby(context echo.Context) error {
 		return echo.ErrBadRequest
 	}
 	coreLobby := mapLobbyCreateToCoreLobby(lobby, lobbyId)
-	err = api.core.CreateLobby(customContext, coreLobby)
+	err = api.core.CreateLobby(customContext, coreLobby, lobby.PlayerPayload)
 
 	if err != nil {
 		logger.Warnf("Error while creating lobby: %v", err)
@@ -289,19 +293,19 @@ func getPlayerId(context echo.Context) (uuid.UUID, error) {
 }
 
 func mapLobbyJoinToCoreJoin(lobbyJoin *LobbyJoin, lobbyId uuid.UUID, playerId uuid.UUID) *core.Join {
-	return &core.Join{PlayerId: playerId, LobbyID: lobbyId, Name: lobbyJoin.Name, Team: lobbyJoin.Team, Password: lobbyJoin.Password}
+	return &core.Join{PlayerId: playerId, LobbyID: lobbyId, Name: lobbyJoin.Name, Password: lobbyJoin.Password, Payload: lobbyJoin.Payload}
 }
 
 func mapLobbyCreateToCoreLobby(lobby *LobbyCreate, lobbyId uuid.UUID) *core.Lobby {
-	return &core.Lobby{ID: lobbyId, Name: lobby.Name, Owner: mapToCorePlayer(lobby.Owner), Password: lobby.Password, Difficulty: lobby.Difficulty, MissionLength: lobby.MissionLength, CrewMembers: lobby.CrewMembers, MaxPlayers: lobby.MaxPlayers, ExpansionPacks: lobby.ExpansionPacks}
+	return &core.Lobby{ID: lobbyId, Name: lobby.Name, Owner: mapToCorePlayer(lobby.Owner), Password: lobby.Password, Difficulty: lobby.Difficulty, MissionLength: lobby.MissionLength, NumberOfCrewMembers: lobby.NumberOfCrewMembers, MaxPlayers: lobby.MaxPlayers, ExpansionPacks: lobby.ExpansionPacks, Payload: lobby.Payload}
 }
 
 func mapLobbyUpdateToCoreLobby(lobby *LobbyUpdate, lobbyId uuid.UUID) *core.Lobby {
-	return &core.Lobby{ID: lobbyId, Name: lobby.Name, Password: lobby.Password, Difficulty: lobby.Difficulty}
+	return &core.Lobby{ID: lobbyId, Name: lobby.Name, Password: lobby.Password, Difficulty: lobby.Difficulty, Payload: lobby.Payload}
 }
 
 func mapToLobby(lobby *core.Lobby) *Lobby {
-	return &Lobby{ID: lobby.ID, Status: lobby.Status, Name: lobby.Name, Owner: mapToPlayer(lobby.Owner), Difficulty: lobby.Difficulty, MissionLength: lobby.MissionLength, CrewMembers: lobby.CrewMembers, MaxPlayers: lobby.MaxPlayers, ExpansionPacks: lobby.ExpansionPacks, Players: mapToPlayers(lobby.Players)}
+	return &Lobby{ID: lobby.ID, Status: lobby.Status, Name: lobby.Name, Owner: mapToPlayer(lobby.Owner), Difficulty: lobby.Difficulty, MissionLength: lobby.MissionLength, NumberOfCrewMembers: lobby.NumberOfCrewMembers, MaxPlayers: lobby.MaxPlayers, ExpansionPacks: lobby.ExpansionPacks, Players: mapToPlayers(lobby.Players)}
 }
 
 func mapToLobbies(coreLobbies []*core.Lobby) []*Lobby {
@@ -324,12 +328,12 @@ func mapToPlayer(player *core.Player) *Player {
 	if player == nil {
 		return nil
 	}
-	return &Player{ID: player.ID, Name: player.Name, Team: player.Team}
+	return &Player{ID: player.ID, Name: player.Name, Payload: player.Payload}
 }
 
 func mapToCorePlayer(player *Player) *core.Player {
 	if player == nil {
 		return nil
 	}
-	return &core.Player{ID: player.ID, Name: player.Name, Team: player.Team}
+	return &core.Player{ID: player.ID, Name: player.Name, Payload: player.Payload}
 }

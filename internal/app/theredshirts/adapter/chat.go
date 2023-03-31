@@ -17,7 +17,6 @@ type (
 
 	PlayerCreate struct {
 		Name string `json:"name"`
-		Team string `json:"team"`
 	}
 )
 

@@ -20,7 +20,7 @@ type (
 	}
 
 	Core interface {
-		CreateLobby(context *util.Context, lobby *Lobby) error
+		CreateLobby(context *util.Context, lobby *Lobby, playerPayload map[string]interface{}) error
 		GetLobby(lobbyId uuid.UUID) (*Lobby, error)
 		UpdateLobby(lobby *Lobby) error
 		GetLobbies() ([]*Lobby, error)
@@ -31,33 +31,34 @@ type (
 
 	//Objects
 	Lobby struct {
-		ID             uuid.UUID
-		Status         string
-		Name           string
-		Owner          *Player
-		Password       string
-		Difficulty     int
-		MissionLength  int
-		CrewMembers    int
-		MaxPlayers     int
-		ExpansionPacks []string
-		Players        []*Player
+		ID                  uuid.UUID
+		Status              string
+		Name                string
+		Owner               *Player
+		Password            string
+		Difficulty          int
+		MissionLength       int
+		NumberOfCrewMembers int
+		MaxPlayers          int
+		ExpansionPacks      []string
+		Players             []*Player
+		Payload             map[string]interface{}
 	}
 
 	Join struct {
 		PlayerId uuid.UUID
 		LobbyID  uuid.UUID
 		Name     string
-		Team     string
 		Password string
+		Payload  map[string]interface{}
 	}
 
 	Player struct {
 		ID          uuid.UUID
 		Name        string
-		Team        string
 		LastRefresh time.Time
 		LobbyId     uuid.UUID
+		Payload     map[string]interface{}
 	}
 )
 

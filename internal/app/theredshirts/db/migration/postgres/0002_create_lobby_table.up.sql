@@ -6,7 +6,8 @@ CREATE TABLE theredshirts_lobby.lobby (
     password varchar NOT NULL,
     difficulty integer NOT NULL,
     mission_length integer NOT NULL,
-    crew_members integer NOT NULL,
+    number_of_crew_members integer NOT NULL,
     max_players integer NOT NULL,
-    expansion_packs varchar[] 
+    expansion_packs varchar[],
+    payload json
 );

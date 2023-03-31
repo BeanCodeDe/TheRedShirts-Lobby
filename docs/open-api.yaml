@@ -238,6 +238,8 @@ components:
           type: string
         password:
           type: string
+        payload:
+          type: object
     CreateLobby:
       type: object
       properties:
@@ -249,7 +251,21 @@ components:
         password:
           type: string
         difficulty:
-          type: string
+          type: integer
+        mission_length:
+          type: integer
+        number_of_crew_members:
+          type: integer
+        max_players:
+          type: integer
+        expansion_packs:
+          type: array
+          items:
+            type: string
+        player_payload:
+          type: object
+        payload:
+          type: object
     UpdateLobby:
       type: object
       properties:
@@ -258,7 +274,19 @@ components:
         password:
           type: string
         difficulty:
-          type: string
+          type: integer
+        mission_length:
+          type: integer
+        number_of_crew_members:
+          type: integer
+        max_players:
+          type: integer
+        expansion_packs:
+          type: array
+          items:
+            type: string
+        payload:
+          type: object
     Lobby:
       type: object
       properties:
@@ -267,12 +295,27 @@ components:
           format: uuid
         name:
           type: string
-        difficulty:
+        status:
           type: string
+        difficulty:
+          type: integer
+        mission_length:
+          type: integer
+        number_of_crew_members:
+          type: integer
+        max_players:
+          type: integer
+        expansion_packs:
+          type: array
+          items:
+            type: string
         players:
           type: array
           items:
             $ref: '#/components/schemas/Player'
+        payload:
+          type: object
+
     Player:
       type: object
       properties:
@@ -281,5 +324,5 @@ components:
           format: uuid
         name:
           type: string
-        team:
-          type: string
+        payload:
+          type: object

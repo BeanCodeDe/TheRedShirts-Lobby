@@ -11,24 +11,25 @@ import (
 
 type (
 	Lobby struct {
-		ID             uuid.UUID `db:"id"`
-		Status         string    `db:"status"`
-		Name           string    `db:"name"`
-		Owner          uuid.UUID `db:"owner"`
-		Password       string    `db:"password"`
-		Difficulty     int       `db:"difficulty"`
-		MissionLength  int       `db:"mission_length"`
-		CrewMembers    int       `db:"crew_members"`
-		MaxPlayers     int       `db:"max_players"`
-		ExpansionPacks []string  `db:"expansion_packs"`
+		ID                  uuid.UUID              `db:"id"`
+		Status              string                 `db:"status"`
+		Name                string                 `db:"name"`
+		Owner               uuid.UUID              `db:"owner"`
+		Password            string                 `db:"password"`
+		Difficulty          int                    `db:"difficulty"`
+		MissionLength       int                    `db:"mission_length"`
+		NumberOfCrewMembers int                    `db:"number_of_crew_members"`
+		MaxPlayers          int                    `db:"max_players"`
+		ExpansionPacks      []string               `db:"expansion_packs"`
+		Payload             map[string]interface{} `db:"payload"`
 	}
 
 	Player struct {
-		ID          uuid.UUID `db:"id"`
-		Name        string    `db:"name"`
-		Team        string    `db:"team"`
-		LobbyId     uuid.UUID `db:"lobby_id"`
-		LastRefresh time.Time `db:"last_refresh"`
+		ID          uuid.UUID              `db:"id"`
+		Name        string                 `db:"name"`
+		LobbyId     uuid.UUID              `db:"lobby_id"`
+		LastRefresh time.Time              `db:"last_refresh"`
+		Payload     map[string]interface{} `db:"payload"`
 	}
 
 	DB interface {
