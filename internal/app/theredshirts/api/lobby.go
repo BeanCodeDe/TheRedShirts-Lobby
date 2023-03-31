@@ -27,7 +27,6 @@ type (
 		NumberOfCrewMembers int                    `json:"number_of_crew_members" validate:"required"`
 		MaxPlayers          int                    `json:"max_players" validate:"required"`
 		ExpansionPacks      []string               `json:"expansion_packs"`
-		PlayerPayload       map[string]interface{} `json:"player_payload"`
 		Payload             map[string]interface{} `json:"payload"`
 	}
 
@@ -99,7 +98,7 @@ func (api *EchoApi) createLobby(context echo.Context) error {
 		return echo.ErrBadRequest
 	}
 	coreLobby := mapLobbyCreateToCoreLobby(lobby)
-	err = api.core.CreateLobby(customContext, coreLobby, lobby.PlayerPayload)
+	err = api.core.CreateLobby(customContext, coreLobby)
 
 	if err != nil {
 		logger.Warnf("Error while creating lobby: %v", err)

@@ -9,15 +9,15 @@ import (
 	"github.com/google/uuid"
 )
 
-func (core CoreFacade) CreateLobby(context *util.Context, lobby *Lobby, playerPayload map[string]interface{}) error {
+func (core CoreFacade) CreateLobby(context *util.Context, lobby *Lobby) error {
 	tx, err := core.db.StartTransaction()
 	defer tx.HandleTransaction(err)
 	lobby.Status = lobby_open
-	err = core.createLobby(tx, context, lobby, playerPayload)
+	err = core.createLobby(tx, context, lobby)
 	return err
 }
 
-func (core CoreFacade) createLobby(tx db.DBTx, context *util.Context, lobby *Lobby, playerPayload map[string]interface{}) error {
+func (core CoreFacade) createLobby(tx db.DBTx, context *util.Context, lobby *Lobby) error {
 	dbLobby := mapToDBLobby(lobby)
 
 	if err := tx.CreateLobby(dbLobby); err != nil {
@@ -35,7 +35,7 @@ func (core CoreFacade) createLobby(tx db.DBTx, context *util.Context, lobby *Lob
 
 	}
 
-	if err := core.createPlayer(context, tx, lobby.Owner.ID, lobby.Owner.Name, lobby.ID, lobby.Password, playerPayload); err != nil {
+	if err := core.createPlayer(context, tx, lobby.Owner.ID, lobby.Owner.Name, lobby.ID, lobby.Password, lobby.Owner.Payload); err != nil {
 		return err
 	}
 

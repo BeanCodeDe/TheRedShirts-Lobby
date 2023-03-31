@@ -20,7 +20,7 @@ type (
 	}
 
 	Core interface {
-		CreateLobby(context *util.Context, lobby *Lobby, playerPayload map[string]interface{}) error
+		CreateLobby(context *util.Context, lobby *Lobby) error
 		GetLobby(lobbyId uuid.UUID) (*Lobby, error)
 		UpdateLobby(lobby *Lobby) error
 		UpdateLobbyStatus(lobby *Lobby) error
