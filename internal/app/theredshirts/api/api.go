@@ -47,6 +47,9 @@ func NewApi() (Api, error) {
 	lobbyGroup := e.Group(lobby_root_path)
 	initLobbyInterface(lobbyGroup, echoApi)
 
+	playerGroup := e.Group(player_root_path)
+	initPlayerInterface(playerGroup, echoApi)
+
 	address := util.GetEnvWithFallback("ADDRESS", "0.0.0.0")
 	port, err := util.GetEnvIntWithFallback("PORT", 1203)
 	if err != nil {

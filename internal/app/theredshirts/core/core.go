@@ -23,10 +23,12 @@ type (
 		CreateLobby(context *util.Context, lobby *Lobby, playerPayload map[string]interface{}) error
 		GetLobby(lobbyId uuid.UUID) (*Lobby, error)
 		UpdateLobby(lobby *Lobby) error
+		UpdateLobbyStatus(lobby *Lobby) error
 		GetLobbies() ([]*Lobby, error)
 		DeleteLobby(lobbyId uuid.UUID) error
-		JoinLobby(context *util.Context, join *Join) error
-		LeaveLobby(context *util.Context, lobbyId uuid.UUID, playerId uuid.UUID) error
+		CreatePlayer(context *util.Context, join *Player, password string) error
+		UpdatePlayer(context *util.Context, player *Player) error
+		DeletePlayer(context *util.Context, lobbyId uuid.UUID, playerId uuid.UUID) error
 	}
 
 	//Objects
@@ -43,14 +45,6 @@ type (
 		ExpansionPacks      []string
 		Players             []*Player
 		Payload             map[string]interface{}
-	}
-
-	Join struct {
-		PlayerId uuid.UUID
-		LobbyID  uuid.UUID
-		Name     string
-		Password string
-		Payload  map[string]interface{}
 	}
 
 	Player struct {

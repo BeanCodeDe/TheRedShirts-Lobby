@@ -3,9 +3,7 @@ package core
 import (
 	"errors"
 	"fmt"
-	"time"
 
-	"github.com/BeanCodeDe/TheRedShirts-Lobby/internal/app/theredshirts/adapter"
 	"github.com/BeanCodeDe/TheRedShirts-Lobby/internal/app/theredshirts/db"
 	"github.com/BeanCodeDe/TheRedShirts-Lobby/internal/app/theredshirts/util"
 	"github.com/google/uuid"
@@ -37,7 +35,7 @@ func (core CoreFacade) createLobby(tx db.DBTx, context *util.Context, lobby *Lob
 
 	}
 
-	if err := core.joinLobby(context, tx, lobby.Owner.ID, lobby.Owner.Name, lobby.ID, lobby.Password, playerPayload); err != nil {
+	if err := core.createPlayer(context, tx, lobby.Owner.ID, lobby.Owner.Name, lobby.ID, lobby.Password, playerPayload); err != nil {
 		return err
 	}
 
@@ -57,8 +55,8 @@ func (core CoreFacade) updateLobby(tx db.DBTx, lobby *Lobby) error {
 		return fmt.Errorf("something went wrong while loading lobby [%v] from database: %v", lobby.ID, err)
 	}
 
-	if dbLobby.Status == lobby_playing {
-		return fmt.Errorf("can not change lobby when status is playing")
+	if dbLobby.Owner == lobby.Owner.ID {
+		return fmt.Errorf("only owner of the lobby can update the lobby")
 	}
 
 	dbLobby.Name = lobby.Name
@@ -78,6 +76,34 @@ func (core CoreFacade) updateLobby(tx db.DBTx, lobby *Lobby) error {
 	}
 	return nil
 }
+
+func (core CoreFacade) UpdateLobbyStatus(lobby *Lobby) error {
+	tx, err := core.db.StartTransaction()
+	defer tx.HandleTransaction(err)
+	err = core.updateLobbyStatus(tx, lobby)
+	return err
+}
+
+func (core CoreFacade) updateLobbyStatus(tx db.DBTx, lobby *Lobby) error {
+	dbLobby, err := tx.GetLobbyById(lobby.ID)
+	if err != nil {
+		return fmt.Errorf("something went wrong while loading lobby [%v] from database: %v", lobby.ID, err)
+	}
+
+	if dbLobby.Owner == lobby.Owner.ID {
+		return fmt.Errorf("only owner of the lobby can change the state")
+	}
+
+	dbLobby.Status = lobby.Status
+
+	if err := tx.UpdateLobby(dbLobby); err != nil {
+		if err != nil {
+			return fmt.Errorf("something went wrong while updating state of lobby [%v]: %v", lobby.ID, err)
+		}
+	}
+	return nil
+}
+
 func (core CoreFacade) DeleteLobby(lobbyId uuid.UUID) error {
 	tx, err := core.db.StartTransaction()
 	defer tx.HandleTransaction(err)
@@ -151,113 +177,6 @@ func (core CoreFacade) GetLobbies() ([]*Lobby, error) {
 	}
 
 	return coreLobbies, nil
-}
-
-func (core CoreFacade) JoinLobby(context *util.Context, join *Join) error {
-	tx, err := core.db.StartTransaction()
-	defer tx.HandleTransaction(err)
-	if err != nil {
-		return fmt.Errorf("something went wrong while creating transaction: %v", err)
-	}
-	err = core.joinLobby(context, tx, join.PlayerId, join.Name, join.LobbyID, join.Password, join.Payload)
-	return err
-}
-
-func (core CoreFacade) joinLobby(context *util.Context, tx db.DBTx, playerId uuid.UUID, playerName string, lobbyId uuid.UUID, password string, payload map[string]interface{}) error {
-
-	player, err := core.getPlayer(tx, playerId)
-	if err != nil {
-		return err
-	}
-
-	if player != nil {
-		if lobbyId != player.LobbyId {
-			if err := core.leaveLobby(context, tx, lobbyId, playerId); err != nil {
-				return err
-			}
-		} else {
-			player.LastRefresh = time.Now()
-			player.Payload = player.Payload
-			if err := tx.UpdatePlayer(mapToDBPlayer(player, lobbyId)); err != nil {
-				return fmt.Errorf("something went wrong while creating player %v from database: %v", playerId, err)
-			}
-			return nil
-		}
-	}
-
-	lobby, err := tx.GetLobbyById(lobbyId)
-	if err != nil {
-		return fmt.Errorf("something went wrong while loading lobby %v from database: %v", lobbyId, err)
-	}
-	if lobby.Password != password {
-		return ErrWrongLobbyPassword
-	}
-	if err := tx.CreatePlayer(&db.Player{ID: playerId, Name: playerName, LobbyId: lobbyId, LastRefresh: time.Now(), Payload: payload}); err != nil {
-		return fmt.Errorf("something went wrong while creating player %v from database: %v", playerId, err)
-	}
-	if err := core.chatAdapter.AddPlayerToChat(context, lobbyId, playerId, &adapter.PlayerCreate{Name: playerName}); err != nil {
-		return fmt.Errorf("error while adding player to chat: %v", err)
-	}
-	return nil
-}
-
-func (core CoreFacade) LeaveLobby(context *util.Context, lobbyId uuid.UUID, playerId uuid.UUID) error {
-	tx, err := core.db.StartTransaction()
-	defer tx.HandleTransaction(err)
-
-	err = core.leaveLobby(context, tx, lobbyId, playerId)
-	return err
-}
-
-func (core CoreFacade) leaveLobby(context *util.Context, tx db.DBTx, lobbyId uuid.UUID, playerId uuid.UUID) error {
-	context.Logger.Debugf("Player [%s] leaves lobby [%s]", playerId, lobbyId)
-	player, err := core.getPlayer(tx, playerId)
-	if err != nil {
-		return err
-	}
-
-	if player == nil {
-		context.Logger.Debugf("No player for id [%s] found", playerId)
-		return nil
-	}
-
-	if player.LobbyId != lobbyId {
-		context.Logger.Debugf("Lobby id [%s] from player doesent match id [%s] from request", player.LobbyId, lobbyId)
-		return nil
-	}
-
-	lobby, err := core.getLobby(tx, lobbyId)
-	if err != nil {
-		return err
-	}
-
-	if lobby.Owner.ID == playerId {
-		context.Logger.Debugf("Player who is leaving is also owner of lobby [%s]", lobbyId)
-		foundNewOwner := findPlayerNot(lobby.Players, playerId)
-		if foundNewOwner == nil {
-			context.Logger.Debugf("No new owner found. Deleting lobby [%s]", lobbyId)
-			if err := core.deleteLobby(tx, lobbyId); err != nil {
-				return err
-			}
-		} else {
-			context.Logger.Debugf("Player [%s] found to be the new owner of lobby [%s]", foundNewOwner.ID, lobbyId)
-			lobby.Owner = foundNewOwner
-			if err := core.updateLobby(tx, lobby); err != nil {
-				return err
-			}
-		}
-	}
-
-	context.Logger.Debugf("Delete player [%s]", playerId)
-	if err := tx.DeletePlayer(playerId); err != nil {
-		return fmt.Errorf("something went wrong while deleting player %v from database: %v", playerId, err)
-	}
-
-	context.Logger.Debugf("Remove player [%s] from lobby chat [%s]", playerId, lobbyId)
-	if err := core.chatAdapter.DeletePlayerFromChat(context, lobbyId, playerId); err != nil {
-		return fmt.Errorf("error while deleting player from chat: %v", err)
-	}
-	return nil
 }
 
 func mapToDBLobby(lobby *Lobby) *db.Lobby {
