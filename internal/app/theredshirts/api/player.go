@@ -17,7 +17,7 @@ const (
 )
 
 type (
-	CreatePlayer struct {
+	PlayerCreate struct {
 		ID       uuid.UUID              `param:"playerId" validate:"required"`
 		Name     string                 `json:"name" validate:"required"`
 		LobbyId  uuid.UUID              `json:"lobby_id" validate:"required"`
@@ -25,10 +25,15 @@ type (
 		Payload  map[string]interface{} `json:"payload"`
 	}
 
-	UpdatePlayer struct {
+	PlayerUpdate struct {
 		ID      uuid.UUID              `param:"playerId" validate:"required"`
 		Name    string                 `json:"name" validate:"required"`
 		Payload map[string]interface{} `json:"payload"`
+	}
+
+	PlayerDelete struct {
+		ID      uuid.UUID `param:"playerId" validate:"required"`
+		LobbyId uuid.UUID `json:"lobby_id" validate:"required"`
 	}
 
 	Player struct {
@@ -47,11 +52,11 @@ func initPlayerInterface(group *echo.Group, api *EchoApi) {
 func (api *EchoApi) createPlayer(context echo.Context) error {
 	customContext := context.Get(context_key).(*util.Context)
 	logger := customContext.Logger
-	logger.Debug("Join lobby")
+	logger.Debug("Create player")
 
 	createPlayer, err := bindCreatePlayerDTO(context)
 	if err != nil {
-		logger.Warnf("Error while binding lobby join: %v", err)
+		logger.Warnf("Error while binding player to create: %v", err)
 		return echo.ErrBadRequest
 	}
 
@@ -72,11 +77,11 @@ func (api *EchoApi) createPlayer(context echo.Context) error {
 func (api *EchoApi) updatePlayer(context echo.Context) error {
 	customContext := context.Get(context_key).(*util.Context)
 	logger := customContext.Logger
-	logger.Debug("Join lobby")
+	logger.Debug("Update player")
 
 	updatePlayer, err := bindUpdatePlayerDTO(context)
 	if err != nil {
-		logger.Warnf("Error while binding lobby join: %v", err)
+		logger.Warnf("Error while binding player to update: %v", err)
 		return echo.ErrBadRequest
 	}
 
@@ -97,21 +102,15 @@ func (api *EchoApi) updatePlayer(context echo.Context) error {
 func (api *EchoApi) deletePlayer(context echo.Context) error {
 	customContext := context.Get(context_key).(*util.Context)
 	logger := customContext.Logger
-	logger.Debug("Leave lobby")
+	logger.Debug("Delete player")
 
-	playerId, err := getPlayerId(context)
+	deletePlayer, err := bindDeletePlayerDTO(context)
 	if err != nil {
-		logger.Warnf("Error while binding player id: %v", err)
+		logger.Warnf("Error while binding player to delete: %v", err)
 		return echo.ErrBadRequest
 	}
 
-	lobbbyId, err := getLobbyId(context)
-	if err != nil {
-		logger.Warnf("Error while binding player id: %v", err)
-		return echo.ErrBadRequest
-	}
-
-	if err = api.core.DeletePlayer(customContext, lobbbyId, playerId); err != nil {
+	if err = api.core.DeletePlayer(customContext, deletePlayer.LobbyId, deletePlayer.ID); err != nil {
 		logger.Warnf("Error while player leaving lobyy: %v", err)
 		return echo.ErrInternalServerError
 	}
@@ -119,16 +118,8 @@ func (api *EchoApi) deletePlayer(context echo.Context) error {
 	return context.NoContent(http.StatusNoContent)
 }
 
-func getPlayerId(context echo.Context) (uuid.UUID, error) {
-	playerId, err := uuid.Parse(context.Param(player_id_param))
-	if err != nil {
-		return uuid.Nil, fmt.Errorf("error while binding playerId: %v", err)
-	}
-	return playerId, nil
-}
-
-func bindCreatePlayerDTO(context echo.Context) (createPlayer *CreatePlayer, err error) {
-	createPlayer = new(CreatePlayer)
+func bindCreatePlayerDTO(context echo.Context) (createPlayer *PlayerCreate, err error) {
+	createPlayer = new(PlayerCreate)
 	if err := context.Bind(createPlayer); err != nil {
 		return nil, fmt.Errorf("could not bind lobby, %v", err)
 	}
@@ -139,8 +130,8 @@ func bindCreatePlayerDTO(context echo.Context) (createPlayer *CreatePlayer, err 
 	return createPlayer, nil
 }
 
-func bindUpdatePlayerDTO(context echo.Context) (updatePlayer *UpdatePlayer, err error) {
-	updatePlayer = new(UpdatePlayer)
+func bindUpdatePlayerDTO(context echo.Context) (updatePlayer *PlayerUpdate, err error) {
+	updatePlayer = new(PlayerUpdate)
 	if err := context.Bind(updatePlayer); err != nil {
 		return nil, fmt.Errorf("could not bind lobby, %v", err)
 	}
@@ -151,11 +142,23 @@ func bindUpdatePlayerDTO(context echo.Context) (updatePlayer *UpdatePlayer, err 
 	return updatePlayer, nil
 }
 
-func mapCreatePlayerToPlayer(player *CreatePlayer) *core.Player {
+func bindDeletePlayerDTO(context echo.Context) (deletePlayer *PlayerDelete, err error) {
+	deletePlayer = new(PlayerDelete)
+	if err := context.Bind(deletePlayer); err != nil {
+		return nil, fmt.Errorf("could not bind lobby, %v", err)
+	}
+	if err := context.Validate(deletePlayer); err != nil {
+		return nil, fmt.Errorf("could not validate lobby, %v", err)
+	}
+
+	return deletePlayer, nil
+}
+
+func mapCreatePlayerToPlayer(player *PlayerCreate) *core.Player {
 	return &core.Player{ID: player.ID, LobbyId: player.LobbyId, Name: player.Name, Payload: player.Payload}
 }
 
-func mapUpdatePlayerToCorePlayer(player *UpdatePlayer) *core.Player {
+func mapUpdatePlayerToCorePlayer(player *PlayerUpdate) *core.Player {
 	return &core.Player{ID: player.ID, Name: player.Name, Payload: player.Payload}
 }
 

@@ -104,17 +104,37 @@ func (core CoreFacade) updateLobbyStatus(tx db.DBTx, lobby *Lobby) error {
 	return nil
 }
 
-func (core CoreFacade) DeleteLobby(lobbyId uuid.UUID) error {
+func (core CoreFacade) DeleteLobby(context *util.Context, lobbyId uuid.UUID, ownerId uuid.UUID) error {
 	tx, err := core.db.StartTransaction()
 	defer tx.HandleTransaction(err)
 	if err != nil {
 		return fmt.Errorf("something went wrong while creating transaction: %v", err)
 	}
-	err = core.deleteLobby(tx, lobbyId)
+	err = core.deleteLobby(tx, context, lobbyId, ownerId)
 	return err
 }
 
-func (core CoreFacade) deleteLobby(tx db.DBTx, lobbyId uuid.UUID) error {
+func (core CoreFacade) deleteLobby(tx db.DBTx, context *util.Context, lobbyId uuid.UUID, ownerId uuid.UUID) error {
+	lobby, err := tx.GetLobbyById(lobbyId)
+	if err != nil {
+		return fmt.Errorf("an error accourd while deleting all players from lobby [%v]: %v", lobbyId, err)
+	}
+
+	if lobby.Owner != ownerId {
+		return nil
+	}
+
+	players, err := tx.GetAllPlayersInLobby(lobbyId)
+	if err != nil {
+		return fmt.Errorf("error while loeading players to remove from lobby [%v]", lobbyId)
+	}
+
+	for _, player := range players {
+		if err := core.chatAdapter.DeletePlayerFromChat(context, lobbyId, player.ID); err != nil {
+			return fmt.Errorf("error while removing player [%v] from lobby chat [%v]: %v", ownerId, lobbyId, err)
+		}
+	}
+
 	if err := tx.DeleteAllPlayerInLobby(lobbyId); err != nil {
 		return fmt.Errorf("an error accourd while deleting all players from lobby [%v]: %v", lobbyId, err)
 	}

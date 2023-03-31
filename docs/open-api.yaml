@@ -111,7 +111,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateLobby'
+              $ref: '#/components/schemas/LobbyCreate'
       responses:
         '201':
           description: |-
@@ -127,6 +127,13 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
+        - name: owner
+          in: query
+          description: Player ID
+          required: true
+          schema:
+            type: string
             format: UUID
         - in: header
           name: X-Correlation-ID
@@ -139,7 +146,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateLobby'
+              $ref: '#/components/schemas/LobbyUpdate'
       responses:
         '200':
           description: |-
@@ -156,6 +163,13 @@ paths:
           schema:
             type: string
             format: UUID
+        - name: owner
+          in: query
+          description: Player ID
+          required: true
+          schema:
+            type: string
+            format: UUID
         - in: header
           name: X-Correlation-ID
           schema:
@@ -165,11 +179,11 @@ paths:
         '204':
           description: |-
             Empty response
-  /lobby/{lobbyId}/player/{playerId}:
-    put:
+  /lobby/{lobbyId}/status:
+    patch:
       tags:
-        - Join / Leave lobby
-      summary: Join specific lobby
+        - Create lobby
+      summary: Update lobby settings
       parameters:
         - name: lobbyId
           in: path
@@ -178,6 +192,35 @@ paths:
           schema:
             type: string
             format: UUID
+        - name: owner
+          in: query
+          description: Player ID
+          required: true
+          schema:
+            type: string
+            format: UUID
+        - in: header
+          name: X-Correlation-ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        description: Body with parameters to create lobby
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LobbyUpdateState'
+      responses:
+        '200':
+          description: |-
+            Empty response
+  /player/{playerId}:
+    put:
+      tags:
+        - Player interaction
+      summary: Join specific lobby
+      parameters:
         - name: playerId
           in: path
           description: Player ID
@@ -191,28 +234,49 @@ paths:
             type: string
             format: uuid
       requestBody:
-        description: Body with password to join lobby
+        description: Body to join lobby
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/JoinLobby'
+              $ref: '#/components/schemas/PlayerCreate'
+      responses:
+        '201':
+          description: |-
+            Empty response
+    patch:
+      tags:
+        - Player interaction
+      summary: Update player in lobby
+      parameters:
+        - name: playerId
+          in: path
+          description: Player ID
+          required: true
+          schema:
+            type: string
+            format: UUID
+        - in: header
+          name: X-Correlation-ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        description: Body to join lobby
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlayerUpdate'
       responses:
         '201':
           description: |-
             Empty response
     delete:
       tags:
-        - Join / Leave lobby
+        - Player interaction
       summary: Leave specific lobby
       parameters:
-        - name: lobbyId
-          in: path
-          description: Lobby ID
-          required: true
-          schema:
-            type: string
-            format: UUID
         - name: playerId
           in: path
           description: Player ID
@@ -231,16 +295,7 @@ paths:
             Empty response
 components:
   schemas:
-    JoinLobby:
-      type: object
-      properties:
-        name:
-          type: string
-        password:
-          type: string
-        payload:
-          type: object
-    CreateLobby:
+    LobbyCreate:
       type: object
       properties:
         name:
@@ -266,7 +321,7 @@ components:
           type: object
         payload:
           type: object
-    UpdateLobby:
+    LobbyUpdate:
       type: object
       properties:
         name:
@@ -287,6 +342,11 @@ components:
             type: string
         payload:
           type: object
+    LobbyUpdateState:
+      type: object
+      properties:
+        status:
+          type: string
     Lobby:
       type: object
       properties:
@@ -315,7 +375,24 @@ components:
             $ref: '#/components/schemas/Player'
         payload:
           type: object
-
+    PlayerCreate:
+      type: object
+      properties:
+        name:
+          type: string
+        lobby_id:
+          type: string
+        password:
+          type: string
+        payload:
+          type: object
+    PlayerUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        payload:
+          type: object
     Player:
       type: object
       properties:

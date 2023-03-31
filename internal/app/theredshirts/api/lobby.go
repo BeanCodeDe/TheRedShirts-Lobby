@@ -51,6 +51,11 @@ type (
 		Status string    `json:"status"`
 	}
 
+	LobbyDelete struct {
+		ID    uuid.UUID `param:"lobbyId" validate:"required"`
+		Owner uuid.UUID `query:"owner" validate:"required"`
+	}
+
 	Lobby struct {
 		ID                  uuid.UUID              `json:"id"`
 		Name                string                 `json:"name"`
@@ -68,12 +73,12 @@ type (
 
 func initLobbyInterface(group *echo.Group, api *EchoApi) {
 	group.POST("", api.createLobbyId)
-	group.PUT("/:"+lobby_id_param, api.createLobby)
-	group.PATCH("/:"+lobby_id_param, api.updateLobby)
-	group.PATCH("/:"+lobby_id_param+lobby_update_status_path, api.updateStatusLobby)
-	group.DELETE("/:"+lobby_id_param, api.deleteLobby)
 	group.GET("", api.getAllLobbies)
 	group.GET("/:"+lobby_id_param, api.getLobby)
+	group.PUT("/:"+lobby_id_param, api.createLobby)
+	group.PATCH("/:"+lobby_id_param, api.updateLobby)
+	group.DELETE("/:"+lobby_id_param, api.deleteLobby)
+	group.PATCH("/:"+lobby_id_param+lobby_update_status_path, api.updateStatusLobby)
 }
 
 func (api *EchoApi) createLobbyId(context echo.Context) error {
@@ -149,16 +154,17 @@ func (api *EchoApi) updateStatusLobby(context echo.Context) error {
 }
 
 func (api *EchoApi) deleteLobby(context echo.Context) error {
-	logger := context.Get(context_key).(*util.Context).Logger
+	customContext := context.Get(context_key).(*util.Context)
+	logger := customContext.Logger
 	logger.Debug("Delete lobby")
 
-	lobbyId, err := getLobbyId(context)
+	lobby, err := bindLobbyDeleteDTO(context)
 	if err != nil {
 		logger.Warnf("Error while binding lobby id: %v", err)
 		return echo.ErrBadRequest
 	}
 
-	if err := api.core.DeleteLobby(lobbyId); err != nil {
+	if err := api.core.DeleteLobby(customContext, lobby.ID, lobby.Owner); err != nil {
 		logger.Warnf("Error while loading lobby: %v", err)
 		return echo.ErrInternalServerError
 	}
@@ -231,10 +237,22 @@ func bindLobbyUpdateStatusDTO(context echo.Context) (*LobbyUpdateStatus, error) 
 	return lobby, nil
 }
 
+func bindLobbyDeleteDTO(context echo.Context) (*LobbyDelete, error) {
+	var lobby = new(LobbyDelete)
+	if err := context.Bind(lobby); err != nil {
+		return nil, fmt.Errorf("could not bind lobby, %v", err)
+	}
+	if err := context.Validate(lobby); err != nil {
+		return nil, fmt.Errorf("could not validate lobby, %v", err)
+	}
+
+	return lobby, nil
+}
+
 func getLobbyId(context echo.Context) (uuid.UUID, error) {
 	lobbyId, err := uuid.Parse(context.Param(lobby_id_param))
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("error while binding lobbbyId: %v", err)
+		return uuid.Nil, fmt.Errorf("error while binding lobbyId: %v", err)
 	}
 	return lobbyId, nil
 }

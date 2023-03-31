@@ -112,7 +112,7 @@ func (core CoreFacade) deletePlayer(context *util.Context, tx db.DBTx, lobbyId u
 		foundNewOwner := findPlayerNot(lobby.Players, playerId)
 		if foundNewOwner == nil {
 			context.Logger.Debugf("No new owner found. Deleting lobby [%s]", lobbyId)
-			if err := core.deleteLobby(tx, lobbyId); err != nil {
+			if err := core.deleteLobby(tx, context, lobbyId, playerId); err != nil {
 				return err
 			}
 		} else {
@@ -147,10 +147,6 @@ func mapToPlayers(dbPlayers []*db.Player) []*Player {
 		players[index] = mapToPlayer(player)
 	}
 	return players
-}
-
-func mapToDBPlayer(player *Player) *db.Player {
-	return &db.Player{ID: player.ID, Name: player.Name, LobbyId: player.LobbyId, Payload: player.Payload}
 }
 
 func findPlayerNot(players []*Player, notPlayerId uuid.UUID) *Player {
