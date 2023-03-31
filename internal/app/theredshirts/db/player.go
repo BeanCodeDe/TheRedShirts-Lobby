@@ -19,8 +19,8 @@ const (
 	delete_player_sql              = "DELETE FROM %s.%s WHERE id = $1"
 	delete_player_in_lobby_sql     = "DELETE FROM %s.%s WHERE lobby_id = $1"
 	delete_player_older_then_sql   = "DELETE FROM %s.%s WHERE last_refresh < $1"
-	select_player_by_player_id_sql = "SELECT id, name, crew_members, lobby_id FROM %s.%s WHERE id = $1"
-	select_player_by_lobby_id_sql  = "SELECT id, name, crew_members, lobby_id FROM %s.%s WHERE lobby_id = $1"
+	select_player_by_player_id_sql = "SELECT id, name, lobby_id, payload FROM %s.%s WHERE id = $1"
+	select_player_by_lobby_id_sql  = "SELECT id, name, lobby_id, payload FROM %s.%s WHERE lobby_id = $1"
 )
 
 var (

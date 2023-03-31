@@ -31,6 +31,7 @@ type (
 
 	LobbyUpdate struct {
 		Name                string                 `json:"name" validate:"required"`
+		Status              string                 `json:"status"`
 		Password            string                 `json:"password"`
 		Difficulty          int                    `json:"difficulty" validate:"required"`
 		MissionLength       int                    `json:"mission_length" validate:"required"`
@@ -301,11 +302,11 @@ func mapLobbyCreateToCoreLobby(lobby *LobbyCreate, lobbyId uuid.UUID) *core.Lobb
 }
 
 func mapLobbyUpdateToCoreLobby(lobby *LobbyUpdate, lobbyId uuid.UUID) *core.Lobby {
-	return &core.Lobby{ID: lobbyId, Name: lobby.Name, Password: lobby.Password, Difficulty: lobby.Difficulty, Payload: lobby.Payload}
+	return &core.Lobby{ID: lobbyId, Status: lobby.Status, Name: lobby.Name, Password: lobby.Password, Difficulty: lobby.Difficulty, MissionLength: lobby.MissionLength, NumberOfCrewMembers: lobby.NumberOfCrewMembers, MaxPlayers: lobby.MaxPlayers, ExpansionPacks: lobby.ExpansionPacks, Payload: lobby.Payload}
 }
 
 func mapToLobby(lobby *core.Lobby) *Lobby {
-	return &Lobby{ID: lobby.ID, Status: lobby.Status, Name: lobby.Name, Owner: mapToPlayer(lobby.Owner), Difficulty: lobby.Difficulty, MissionLength: lobby.MissionLength, NumberOfCrewMembers: lobby.NumberOfCrewMembers, MaxPlayers: lobby.MaxPlayers, ExpansionPacks: lobby.ExpansionPacks, Players: mapToPlayers(lobby.Players)}
+	return &Lobby{ID: lobby.ID, Status: lobby.Status, Name: lobby.Name, Owner: mapToPlayer(lobby.Owner), Difficulty: lobby.Difficulty, MissionLength: lobby.MissionLength, NumberOfCrewMembers: lobby.NumberOfCrewMembers, MaxPlayers: lobby.MaxPlayers, ExpansionPacks: lobby.ExpansionPacks, Players: mapToPlayers(lobby.Players), Payload: lobby.Payload}
 }
 
 func mapToLobbies(coreLobbies []*core.Lobby) []*Lobby {

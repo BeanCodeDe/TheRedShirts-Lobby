@@ -33,26 +33,26 @@ func NewChatAdapter() *ChatAdapter {
 }
 
 func (adapter *ChatAdapter) AddPlayerToChat(context *util.Context, lobbyId uuid.UUID, playerId uuid.UUID, playerCreate *PlayerCreate) error {
-	response, err := adapter.sendAddPlayerRequest(context, lobbyId, playerId, playerCreate)
+	/*response, err := adapter.sendAddPlayerRequest(context, lobbyId, playerId, playerCreate)
 	if err != nil {
 		return fmt.Errorf("error while adding player to chat: %v", err)
 	}
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusCreated {
 		return fmt.Errorf("wrong status of response while adding player to chat: %v", response.StatusCode)
-	}
+	}*/
 	return nil
 }
 
 func (adapter *ChatAdapter) DeletePlayerFromChat(context *util.Context, lobbyId uuid.UUID, playerId uuid.UUID) error {
-	response, err := adapter.sendDeletePlayerRequest(context, lobbyId, playerId)
+	/*response, err := adapter.sendDeletePlayerRequest(context, lobbyId, playerId)
 	if err != nil {
 		return fmt.Errorf("error while deleting player from chat: %v", err)
 	}
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusNoContent {
 		return fmt.Errorf("wrong status of response while deleting player from chat: %v", response.StatusCode)
-	}
+	}*/
 	return nil
 }
 
