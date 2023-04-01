@@ -33,7 +33,7 @@ type (
 	LobbyUpdate struct {
 		ID                  uuid.UUID              `param:"lobbyId" validate:"required"`
 		Name                string                 `json:"name" validate:"required"`
-		Owner               uuid.UUID              `query:"owner" validate:"required"`
+		Owner               uuid.UUID              `header:"owner" validate:"required"`
 		Status              string                 `json:"status" validate:"required"`
 		Password            string                 `json:"password"`
 		Difficulty          int                    `json:"difficulty" validate:"required"`
@@ -46,13 +46,13 @@ type (
 
 	LobbyUpdateStatus struct {
 		ID     uuid.UUID `param:"lobbyId" validate:"required"`
-		Owner  uuid.UUID `query:"owner" validate:"required"`
+		Owner  uuid.UUID `header:"owner" validate:"required"`
 		Status string    `json:"status"`
 	}
 
 	LobbyDelete struct {
 		ID    uuid.UUID `param:"lobbyId" validate:"required"`
-		Owner uuid.UUID `query:"owner" validate:"required"`
+		Owner uuid.UUID `header:"owner" validate:"required"`
 	}
 
 	Lobby struct {

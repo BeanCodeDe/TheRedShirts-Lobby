@@ -120,6 +120,10 @@ func (core CoreFacade) deleteLobby(tx db.DBTx, context *util.Context, lobbyId uu
 		return fmt.Errorf("an error accourd while deleting all players from lobby [%v]: %v", lobbyId, err)
 	}
 
+	if lobby == nil {
+		return nil
+	}
+
 	if lobby.Owner != ownerId {
 		return nil
 	}

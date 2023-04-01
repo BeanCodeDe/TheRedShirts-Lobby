@@ -38,7 +38,7 @@ func NewApi() (Api, error) {
 	echoApi := &EchoApi{core: core}
 	e := echo.New()
 	e.AutoTLSManager.Cache = autocert.DirCache("/var/www/.cache")
-	e.Use(middleware.CORS(), setContextMiddleware, middleware.Recover())
+	e.Use(middleware.CORS(), setContextMiddleware, middleware.Recover(), middleware.RequestLoggerWithConfig(getRequestLoggingConfig()))
 	e.Validator = &CustomValidator{validator: validator.New()}
 
 	serverGroup := e.Group(server_root_path)
@@ -79,5 +79,17 @@ func setContextMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 
 		c.Set(context_key, &util.Context{CorrelationId: correlationId, Logger: logger})
 		return next(c)
+	}
+}
+
+func getRequestLoggingConfig() middleware.RequestLoggerConfig {
+	return middleware.RequestLoggerConfig{
+		LogStatus: true,
+		LogURI:    true,
+		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
+			context := c.Get(context_key).(*util.Context)
+			context.Logger.Debugf("REQUEST: uri: %v, status: %v, query-params: %v, latency: %v", v.URI, v.Status, v.QueryParams, v.Latency)
+			return nil
+		},
 	}
 }
