@@ -64,29 +64,29 @@ func (core CoreFacade) updatePlayer(context *util.Context, tx db.DBTx, player *P
 		return err
 	}
 
-	if foundPlayer != nil {
-		return nil
+	if foundPlayer == nil {
+		return fmt.Errorf("player [%v] not found", player.ID)
 	}
 
 	foundPlayer.LastRefresh = time.Now()
 	foundPlayer.Name = player.Name
 	foundPlayer.Payload = player.Payload
 	if err := tx.UpdatePlayer(foundPlayer); err != nil {
-		return fmt.Errorf("something went wrong while creating player %v from database: %v", player.ID, err)
+		return fmt.Errorf("something went wrong while updating player [%v]: %v", player.ID, err)
 	}
 	return nil
 }
 
-func (core CoreFacade) DeletePlayer(context *util.Context, lobbyId uuid.UUID, playerId uuid.UUID) error {
+func (core CoreFacade) DeletePlayer(context *util.Context, playerId uuid.UUID) error {
 	tx, err := core.db.StartTransaction()
 	defer tx.HandleTransaction(err)
 
-	err = core.deletePlayer(context, tx, lobbyId, playerId)
+	err = core.deletePlayer(context, tx, playerId)
 	return err
 }
 
-func (core CoreFacade) deletePlayer(context *util.Context, tx db.DBTx, lobbyId uuid.UUID, playerId uuid.UUID) error {
-	context.Logger.Debugf("Player [%s] leaves lobby [%s]", playerId, lobbyId)
+func (core CoreFacade) deletePlayer(context *util.Context, tx db.DBTx, playerId uuid.UUID) error {
+	context.Logger.Debugf("Delete player [%s]", playerId)
 	player, err := core.getPlayer(tx, playerId)
 	if err != nil {
 		return err
@@ -97,31 +97,30 @@ func (core CoreFacade) deletePlayer(context *util.Context, tx db.DBTx, lobbyId u
 		return nil
 	}
 
-	if player.LobbyId != lobbyId {
-		context.Logger.Debugf("Lobby id [%s] from player doesent match id [%s] from request", player.LobbyId, lobbyId)
-		return nil
-	}
-
-	lobby, err := core.getLobby(tx, lobbyId)
+	lobby, err := core.getLobby(tx, player.LobbyId)
 	if err != nil {
 		return err
 	}
 
 	if lobby.Owner.ID == playerId {
-		context.Logger.Debugf("Player who is leaving is also owner of lobby [%s]", lobbyId)
+		context.Logger.Debugf("Player who is leaving is also owner of lobby [%s]", player.LobbyId)
 		foundNewOwner := findPlayerNot(lobby.Players, playerId)
 		if foundNewOwner == nil {
-			context.Logger.Debugf("No new owner found. Deleting lobby [%s]", lobbyId)
-			if err := core.deleteLobby(tx, context, lobbyId, playerId); err != nil {
+			context.Logger.Debugf("No new owner found. Deleting lobby [%s]", player.LobbyId)
+			if err := core.deleteLobby(tx, context, player.LobbyId, playerId); err != nil {
 				return err
 			}
+			return nil
 		} else {
-			context.Logger.Debugf("Player [%s] found to be the new owner of lobby [%s]", foundNewOwner.ID, lobbyId)
+			context.Logger.Debugf("Player [%s] found to be the new owner of lobby [%s]", foundNewOwner.ID, player.LobbyId)
 			lobby.Owner = foundNewOwner
 			if err := core.updateLobby(tx, lobby); err != nil {
 				return err
 			}
 		}
+	}
+	if err := tx.DeletePlayer(playerId); err != nil {
+		return fmt.Errorf("error while deleting player [%v] from database: %v", playerId, err)
 	}
 	return nil
 }

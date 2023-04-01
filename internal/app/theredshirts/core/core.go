@@ -28,7 +28,7 @@ type (
 		DeleteLobby(context *util.Context, lobbyId uuid.UUID, ownerId uuid.UUID) error
 		CreatePlayer(context *util.Context, join *Player, password string) error
 		UpdatePlayer(context *util.Context, player *Player) error
-		DeletePlayer(context *util.Context, lobbyId uuid.UUID, playerId uuid.UUID) error
+		DeletePlayer(context *util.Context, playerId uuid.UUID) error
 	}
 
 	//Objects

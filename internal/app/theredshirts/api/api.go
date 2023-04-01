@@ -88,7 +88,7 @@ func getRequestLoggingConfig() middleware.RequestLoggerConfig {
 		LogURI:    true,
 		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
 			context := c.Get(context_key).(*util.Context)
-			context.Logger.Debugf("REQUEST: uri: %v, status: %v, query-params: %v, latency: %v", v.URI, v.Status, v.QueryParams, v.Latency)
+			context.Logger.Debugf("REQUEST: uri: %v, status: %v, query-params: %v, headers: %v, latency: %v", v.URI, v.Status, v.QueryParams, v.Headers, v.Latency)
 			return nil
 		},
 	}

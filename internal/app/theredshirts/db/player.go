@@ -15,7 +15,7 @@ import (
 const (
 	player_table_name              = "player"
 	create_player_sql              = "INSERT INTO %s.%s(id, name, lobby_id, last_refresh, payload) VALUES($1, $2, $3, $4, $5)"
-	update_player_sql              = "UPDATE %s.%s SET name = $2, lobbyid = $3, last_refresh = $4, payload = $5  WHERE id = $1"
+	update_player_sql              = "UPDATE %s.%s SET name = $2, lobby_id = $3, last_refresh = $4, payload = $5  WHERE id = $1"
 	delete_player_sql              = "DELETE FROM %s.%s WHERE id = $1"
 	delete_player_in_lobby_sql     = "DELETE FROM %s.%s WHERE lobby_id = $1"
 	delete_player_older_then_sql   = "DELETE FROM %s.%s WHERE last_refresh < $1"

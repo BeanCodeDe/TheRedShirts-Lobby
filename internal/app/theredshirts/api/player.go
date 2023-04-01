@@ -32,8 +32,7 @@ type (
 	}
 
 	PlayerDelete struct {
-		ID      uuid.UUID `param:"playerId" validate:"required"`
-		LobbyId uuid.UUID `json:"lobby_id" validate:"required"`
+		ID uuid.UUID `param:"playerId" validate:"required"`
 	}
 
 	Player struct {
@@ -110,7 +109,7 @@ func (api *EchoApi) deletePlayer(context echo.Context) error {
 		return echo.ErrBadRequest
 	}
 
-	if err = api.core.DeletePlayer(customContext, deletePlayer.LobbyId, deletePlayer.ID); err != nil {
+	if err = api.core.DeletePlayer(customContext, deletePlayer.ID); err != nil {
 		logger.Warnf("Error while player leaving lobyy: %v", err)
 		return echo.ErrInternalServerError
 	}

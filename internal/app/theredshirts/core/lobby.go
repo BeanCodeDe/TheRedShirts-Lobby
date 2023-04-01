@@ -45,6 +45,16 @@ func (core CoreFacade) createLobby(tx db.DBTx, context *util.Context, lobby *Lob
 func (core CoreFacade) UpdateLobby(lobby *Lobby) error {
 	tx, err := core.db.StartTransaction()
 	defer tx.HandleTransaction(err)
+
+	dbLobby, err := tx.GetLobbyById(lobby.ID)
+	if err != nil {
+		return fmt.Errorf("something went wrong while loading lobby [%v] from database: %v", lobby.ID, err)
+	}
+
+	if dbLobby.Owner != lobby.Owner.ID {
+		return fmt.Errorf("player [%v] is not owner [%v] of the lobby [%v]", lobby.Owner.ID, dbLobby.Owner, lobby.ID)
+	}
+
 	err = core.updateLobby(tx, lobby)
 	return err
 }
@@ -55,11 +65,8 @@ func (core CoreFacade) updateLobby(tx db.DBTx, lobby *Lobby) error {
 		return fmt.Errorf("something went wrong while loading lobby [%v] from database: %v", lobby.ID, err)
 	}
 
-	if dbLobby.Owner == lobby.Owner.ID {
-		return fmt.Errorf("only owner of the lobby can update the lobby")
-	}
-
 	dbLobby.Name = lobby.Name
+	dbLobby.Status = lobby.Status
 	dbLobby.Difficulty = lobby.Difficulty
 	dbLobby.Owner = lobby.Owner.ID
 	dbLobby.Password = lobby.Password
@@ -90,8 +97,8 @@ func (core CoreFacade) updateLobbyStatus(tx db.DBTx, lobby *Lobby) error {
 		return fmt.Errorf("something went wrong while loading lobby [%v] from database: %v", lobby.ID, err)
 	}
 
-	if dbLobby.Owner == lobby.Owner.ID {
-		return fmt.Errorf("only owner of the lobby can change the state")
+	if dbLobby.Owner != lobby.Owner.ID {
+		return fmt.Errorf("player [%v] is not owner [%v] of the lobby [%v]", lobby.Owner.ID, dbLobby.Owner, lobby.ID)
 	}
 
 	dbLobby.Status = lobby.Status
@@ -125,7 +132,7 @@ func (core CoreFacade) deleteLobby(tx db.DBTx, context *util.Context, lobbyId uu
 	}
 
 	if lobby.Owner != ownerId {
-		return nil
+		return fmt.Errorf("player [%v] is not owner [%v] of the lobby [%v]", ownerId, lobby.Owner, lobbyId)
 	}
 
 	players, err := tx.GetAllPlayersInLobby(lobbyId)
