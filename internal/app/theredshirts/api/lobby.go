@@ -198,6 +198,9 @@ func (api *EchoApi) getLobby(context echo.Context) error {
 		logger.Warnf("Error while loading lobby: %v", err)
 		return echo.ErrInternalServerError
 	}
+	if lobby == nil {
+		return context.NoContent(http.StatusNoContent)
+	}
 	return context.JSON(http.StatusOK, mapToLobby(lobby))
 }
 
@@ -269,6 +272,9 @@ func mapLobbyUpdateStatusToCoreLobby(lobby *LobbyUpdateStatus) *core.Lobby {
 }
 
 func mapToLobby(lobby *core.Lobby) *Lobby {
+	if lobby == nil {
+		return nil
+	}
 	return &Lobby{ID: lobby.ID, Status: lobby.Status, Name: lobby.Name, Owner: mapToPlayer(lobby.Owner), Difficulty: lobby.Difficulty, MissionLength: lobby.MissionLength, NumberOfCrewMembers: lobby.NumberOfCrewMembers, MaxPlayers: lobby.MaxPlayers, ExpansionPacks: lobby.ExpansionPacks, Players: mapToPlayers(lobby.Players), Payload: lobby.Payload}
 }
 

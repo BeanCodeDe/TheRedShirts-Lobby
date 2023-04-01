@@ -62,6 +62,9 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Lobby'
+        '204':
+          description: |-
+            No lobby found
   /lobby/{lobbyId}:
     get:
       tags:
@@ -323,6 +326,8 @@ components:
       type: object
       properties:
         name:
+          type: string
+        status:
           type: string
         password:
           type: string
