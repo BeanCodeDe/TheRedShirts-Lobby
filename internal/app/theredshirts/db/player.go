@@ -16,6 +16,7 @@ const (
 	player_table_name              = "player"
 	create_player_sql              = "INSERT INTO %s.%s(id, name, lobby_id, last_refresh, payload) VALUES($1, $2, $3, $4, $5)"
 	update_player_sql              = "UPDATE %s.%s SET name = $2, lobby_id = $3, last_refresh = $4, payload = $5  WHERE id = $1"
+	update_player_last_refresh_sql = "UPDATE %s.%s SET last_refresh = $2 WHERE id = $1"
 	delete_player_sql              = "DELETE FROM %s.%s WHERE id = $1"
 	delete_player_in_lobby_sql     = "DELETE FROM %s.%s WHERE lobby_id = $1"
 	delete_player_older_then_sql   = "DELETE FROM %s.%s WHERE last_refresh < $1"
@@ -44,6 +45,13 @@ func (tx *postgresTransaction) CreatePlayer(player *Player) error {
 
 func (tx *postgresTransaction) UpdatePlayer(player *Player) error {
 	if _, err := tx.tx.Exec(context.Background(), fmt.Sprintf(update_player_sql, schema_name, player_table_name), player.ID, player.Name, player.LobbyId, player.LastRefresh, player.Payload); err != nil {
+		return fmt.Errorf("unknown error when updating player: %v", err)
+	}
+	return nil
+}
+
+func (tx *postgresTransaction) UpdatePlayerLastRefresh(playerId uuid.UUID, lastRefresh time.Time) error {
+	if _, err := tx.tx.Exec(context.Background(), fmt.Sprintf(update_player_last_refresh_sql, schema_name, player_table_name), playerId, lastRefresh); err != nil {
 		return fmt.Errorf("unknown error when updating player: %v", err)
 	}
 	return nil

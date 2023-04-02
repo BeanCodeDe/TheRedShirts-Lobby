@@ -135,17 +135,6 @@ func (core CoreFacade) deleteLobby(tx db.DBTx, context *util.Context, lobbyId uu
 		return fmt.Errorf("player [%v] is not owner [%v] of the lobby [%v]", ownerId, lobby.Owner, lobbyId)
 	}
 
-	players, err := tx.GetAllPlayersInLobby(lobbyId)
-	if err != nil {
-		return fmt.Errorf("error while loeading players to remove from lobby [%v]", lobbyId)
-	}
-
-	for _, player := range players {
-		if err := core.chatAdapter.DeletePlayerFromChat(context, lobbyId, player.ID); err != nil {
-			return fmt.Errorf("error while removing player [%v] from lobby chat [%v]: %v", ownerId, lobbyId, err)
-		}
-	}
-
 	if err := tx.DeleteAllPlayerInLobby(lobbyId); err != nil {
 		return fmt.Errorf("an error accourd while deleting all players from lobby [%v]: %v", lobbyId, err)
 	}

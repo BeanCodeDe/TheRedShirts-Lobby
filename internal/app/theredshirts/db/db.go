@@ -52,6 +52,7 @@ type (
 		DeleteAllPlayerInLobby(lobbyId uuid.UUID) error
 		DeletePlayerOlderRefreshDate(time time.Time) error
 		UpdatePlayer(player *Player) error
+		UpdatePlayerLastRefresh(playerId uuid.UUID, lastRefresh time.Time) error
 		GetPlayerById(id uuid.UUID) (*Player, error)
 		GetAllPlayersInLobby(lobbyId uuid.UUID) ([]*Player, error)
 	}

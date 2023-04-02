@@ -13,6 +13,7 @@ import (
 
 const (
 	player_root_path = "/player"
+	refresh_path     = "/last-refresh"
 	player_id_param  = "playerId"
 )
 
@@ -31,7 +32,7 @@ type (
 		Payload map[string]interface{} `json:"payload"`
 	}
 
-	PlayerDelete struct {
+	PlayerId struct {
 		ID uuid.UUID `param:"playerId" validate:"required"`
 	}
 
@@ -40,11 +41,19 @@ type (
 		Name    string                 `json:"name" validate:"required"`
 		Payload map[string]interface{} `json:"payload"`
 	}
+
+	SimplePlayer struct {
+		ID      uuid.UUID `json:"id" `
+		Name    string    `json:"name" `
+		LobbyId uuid.UUID `json:"lobby_id"`
+	}
 )
 
 func initPlayerInterface(group *echo.Group, api *EchoApi) {
 	group.PUT("/:"+player_id_param, api.createPlayer)
 	group.PATCH("/:"+player_id_param, api.updatePlayer)
+	group.PATCH("/:"+player_id_param+refresh_path, api.updateLastRefreshPlayer)
+	group.GET("/:"+player_id_param, api.getPlayer)
 	group.DELETE("/:"+player_id_param, api.deletePlayer)
 }
 
@@ -98,12 +107,57 @@ func (api *EchoApi) updatePlayer(context echo.Context) error {
 	return context.NoContent(http.StatusCreated)
 }
 
+func (api *EchoApi) updateLastRefreshPlayer(context echo.Context) error {
+	customContext := context.Get(context_key).(*util.Context)
+	logger := customContext.Logger
+	logger.Debug("Update last refresh player")
+
+	updatePlayer, err := bindPlayerId(context)
+	if err != nil {
+		logger.Warnf("Error while binding player to update last refresh: %v", err)
+		return echo.ErrBadRequest
+	}
+
+	err = api.core.UpdatePlayerLastRefresh(updatePlayer.ID)
+
+	if err != nil {
+		if errors.Is(err, core.ErrWrongLobbyPassword) {
+			logger.Infof("Player enterd wrong lobby password: %v", err)
+			return echo.ErrUnauthorized
+		}
+		logger.Warnf("Error while joining lobby: %v", err)
+		return echo.ErrInternalServerError
+	}
+
+	return context.NoContent(http.StatusOK)
+}
+
+func (api *EchoApi) getPlayer(context echo.Context) error {
+	customContext := context.Get(context_key).(*util.Context)
+	logger := customContext.Logger
+	logger.Debug("Get player")
+
+	playerId, err := bindPlayerId(context)
+	if err != nil {
+		logger.Warnf("Error while binding player to update last refresh: %v", err)
+		return echo.ErrBadRequest
+	}
+
+	player, err := api.core.GetPlayer(playerId.ID)
+	if err != nil {
+		logger.Warnf("Error while getting player [%v]: %v", playerId.ID, err)
+		return echo.ErrInternalServerError
+	}
+
+	return context.JSON(http.StatusOK, mapToSimplePlayer(player))
+}
+
 func (api *EchoApi) deletePlayer(context echo.Context) error {
 	customContext := context.Get(context_key).(*util.Context)
 	logger := customContext.Logger
 	logger.Debug("Delete player")
 
-	deletePlayer, err := bindDeletePlayerDTO(context)
+	deletePlayer, err := bindPlayerId(context)
 	if err != nil {
 		logger.Warnf("Error while binding player to delete: %v", err)
 		return echo.ErrBadRequest
@@ -132,25 +186,25 @@ func bindCreatePlayerDTO(context echo.Context) (createPlayer *PlayerCreate, err 
 func bindUpdatePlayerDTO(context echo.Context) (updatePlayer *PlayerUpdate, err error) {
 	updatePlayer = new(PlayerUpdate)
 	if err := context.Bind(updatePlayer); err != nil {
-		return nil, fmt.Errorf("could not bind lobby, %v", err)
+		return nil, fmt.Errorf("could not bind update player, %v", err)
 	}
 	if err := context.Validate(updatePlayer); err != nil {
-		return nil, fmt.Errorf("could not validate lobby, %v", err)
+		return nil, fmt.Errorf("could not validate update player, %v", err)
 	}
 
 	return updatePlayer, nil
 }
 
-func bindDeletePlayerDTO(context echo.Context) (deletePlayer *PlayerDelete, err error) {
-	deletePlayer = new(PlayerDelete)
-	if err := context.Bind(deletePlayer); err != nil {
-		return nil, fmt.Errorf("could not bind lobby, %v", err)
+func bindPlayerId(context echo.Context) (player *PlayerId, err error) {
+	player = new(PlayerId)
+	if err := context.Bind(player); err != nil {
+		return nil, fmt.Errorf("could not bind player id , %v", err)
 	}
-	if err := context.Validate(deletePlayer); err != nil {
-		return nil, fmt.Errorf("could not validate lobby, %v", err)
+	if err := context.Validate(player); err != nil {
+		return nil, fmt.Errorf("could not validate player id, %v", err)
 	}
 
-	return deletePlayer, nil
+	return player, nil
 }
 
 func mapCreatePlayerToPlayer(player *PlayerCreate) *core.Player {
@@ -176,6 +230,12 @@ func mapToPlayer(player *core.Player) *Player {
 	return &Player{ID: player.ID, Name: player.Name, Payload: player.Payload}
 }
 
+func mapToSimplePlayer(player *core.Player) *SimplePlayer {
+	if player == nil {
+		return nil
+	}
+	return &SimplePlayer{ID: player.ID, Name: player.Name, LobbyId: player.LobbyId}
+}
 func mapToCorePlayer(player *Player) *core.Player {
 	if player == nil {
 		return nil
