@@ -3,7 +3,7 @@ info:
   title: TheRedShirts-Lobby Api 
   version: 1.0.0
 servers:
-  - url: http://localhost:1203
+  - url: http://localhost
 
 paths:
   /server/ping:
