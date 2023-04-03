@@ -42,7 +42,7 @@ func (core CoreFacade) createLobby(tx db.DBTx, context *util.Context, lobby *Lob
 	return nil
 }
 
-func (core CoreFacade) UpdateLobby(lobby *Lobby) error {
+func (core CoreFacade) UpdateLobby(context *util.Context, lobby *Lobby) error {
 	tx, err := core.db.StartTransaction()
 	defer tx.HandleTransaction(err)
 
@@ -55,11 +55,11 @@ func (core CoreFacade) UpdateLobby(lobby *Lobby) error {
 		return fmt.Errorf("player [%v] is not owner [%v] of the lobby [%v]", lobby.Owner.ID, dbLobby.Owner, lobby.ID)
 	}
 
-	err = core.updateLobby(tx, lobby)
+	err = core.updateLobby(context, tx, lobby)
 	return err
 }
 
-func (core CoreFacade) updateLobby(tx db.DBTx, lobby *Lobby) error {
+func (core CoreFacade) updateLobby(context *util.Context, tx db.DBTx, lobby *Lobby) error {
 	dbLobby, err := tx.GetLobbyById(lobby.ID)
 	if err != nil {
 		return fmt.Errorf("something went wrong while loading lobby [%v] from database: %v", lobby.ID, err)
@@ -81,17 +81,17 @@ func (core CoreFacade) updateLobby(tx db.DBTx, lobby *Lobby) error {
 			return fmt.Errorf("something went wrong while updating lobby [%v]: %v", lobby.ID, err)
 		}
 	}
-	return nil
+	return core.createPlayerUpdatesLobbyMessage(*context, lobby.ID)
 }
 
-func (core CoreFacade) UpdateLobbyStatus(lobby *Lobby) error {
+func (core CoreFacade) UpdateLobbyStatus(context *util.Context, lobby *Lobby) error {
 	tx, err := core.db.StartTransaction()
 	defer tx.HandleTransaction(err)
-	err = core.updateLobbyStatus(tx, lobby)
+	err = core.updateLobbyStatus(context, tx, lobby)
 	return err
 }
 
-func (core CoreFacade) updateLobbyStatus(tx db.DBTx, lobby *Lobby) error {
+func (core CoreFacade) updateLobbyStatus(context *util.Context, tx db.DBTx, lobby *Lobby) error {
 	dbLobby, err := tx.GetLobbyById(lobby.ID)
 	if err != nil {
 		return fmt.Errorf("something went wrong while loading lobby [%v] from database: %v", lobby.ID, err)
@@ -108,7 +108,8 @@ func (core CoreFacade) updateLobbyStatus(tx db.DBTx, lobby *Lobby) error {
 			return fmt.Errorf("something went wrong while updating state of lobby [%v]: %v", lobby.ID, err)
 		}
 	}
-	return nil
+
+	return core.createPlayerUpdatesLobbyMessage(*context, lobby.ID)
 }
 
 func (core CoreFacade) DeleteLobby(context *util.Context, lobbyId uuid.UUID, ownerId uuid.UUID) error {

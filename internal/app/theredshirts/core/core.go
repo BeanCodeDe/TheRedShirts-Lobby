@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/BeanCodeDe/TheRedShirts-Lobby/internal/app/theredshirts/adapter"
 	"github.com/BeanCodeDe/TheRedShirts-Lobby/internal/app/theredshirts/db"
 	"github.com/BeanCodeDe/TheRedShirts-Lobby/internal/app/theredshirts/util"
 	"github.com/google/uuid"
@@ -14,14 +15,15 @@ type (
 
 	//Facade
 	CoreFacade struct {
-		db db.DB
+		db             db.DB
+		messageAdapter *adapter.MessageAdapter
 	}
 
 	Core interface {
 		CreateLobby(context *util.Context, lobby *Lobby) error
 		GetLobby(lobbyId uuid.UUID) (*Lobby, error)
-		UpdateLobby(lobby *Lobby) error
-		UpdateLobbyStatus(lobby *Lobby) error
+		UpdateLobby(context *util.Context, lobby *Lobby) error
+		UpdateLobbyStatus(context *util.Context, lobby *Lobby) error
 		GetLobbies() ([]*Lobby, error)
 		DeleteLobby(context *util.Context, lobbyId uuid.UUID, ownerId uuid.UUID) error
 		CreatePlayer(context *util.Context, join *Player, password string) error
@@ -70,6 +72,11 @@ func NewCore() (Core, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error while initializing database: %v", err)
 	}
-	core := &CoreFacade{db: db}
+	messageAdapter, err := adapter.NewMessageAdapter()
+	if err != nil {
+		return nil, fmt.Errorf("erro while initializing messageadapter: %v", err)
+	}
+	core := &CoreFacade{db: db, messageAdapter: messageAdapter}
+	core.startCleanUp()
 	return core, nil
 }

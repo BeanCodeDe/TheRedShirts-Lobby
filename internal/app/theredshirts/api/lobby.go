@@ -107,7 +107,8 @@ func (api *EchoApi) createLobby(context echo.Context) error {
 }
 
 func (api *EchoApi) updateLobby(context echo.Context) error {
-	logger := context.Get(context_key).(*util.Context).Logger
+	customContext := context.Get(context_key).(*util.Context)
+	logger := customContext.Logger
 	logger.Debug("Update lobby")
 
 	lobby, ownerId, err := bindLobbyUpdateDTO(context)
@@ -117,7 +118,7 @@ func (api *EchoApi) updateLobby(context echo.Context) error {
 	}
 
 	coreLobby := mapLobbyUpdateToCoreLobby(lobby, ownerId)
-	err = api.core.UpdateLobby(coreLobby)
+	err = api.core.UpdateLobby(customContext, coreLobby)
 
 	if err != nil {
 		logger.Warnf("Error while creating lobby: %v", err)
@@ -128,7 +129,8 @@ func (api *EchoApi) updateLobby(context echo.Context) error {
 }
 
 func (api *EchoApi) updateStatusLobby(context echo.Context) error {
-	logger := context.Get(context_key).(*util.Context).Logger
+	customContext := context.Get(context_key).(*util.Context)
+	logger := customContext.Logger
 	logger.Debug("Update status of lobby")
 
 	lobby, ownerId, err := bindLobbyUpdateStatusDTO(context)
@@ -139,7 +141,7 @@ func (api *EchoApi) updateStatusLobby(context echo.Context) error {
 	}
 
 	coreLobby := mapLobbyUpdateStatusToCoreLobby(lobby, ownerId)
-	err = api.core.UpdateLobbyStatus(coreLobby)
+	err = api.core.UpdateLobbyStatus(customContext, coreLobby)
 
 	if err != nil {
 		logger.Warnf("Error while creating lobby: %v", err)

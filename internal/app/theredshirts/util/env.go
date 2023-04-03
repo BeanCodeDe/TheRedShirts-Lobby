@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+
+	"github.com/google/uuid"
 )
 
 func GetEnvWithFallback(key, fallback string) string {
@@ -25,4 +27,11 @@ func GetEnvIntWithFallback(key string, fallback int) (int, error) {
 		return strconv.Atoi(value)
 	}
 	return fallback, nil
+}
+
+func GetEnvUUID(key string) (uuid.UUID, error) {
+	if value, ok := os.LookupEnv(key); ok {
+		return uuid.Parse(value)
+	}
+	return uuid.Nil, fmt.Errorf("environment variable %s not found", key)
 }

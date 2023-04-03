@@ -40,7 +40,8 @@ func (core CoreFacade) createPlayer(context *util.Context, tx db.DBTx, playerId 
 	if err := tx.CreatePlayer(&db.Player{ID: playerId, Name: playerName, LobbyId: lobbyId, LastRefresh: time.Now(), Payload: payload}); err != nil {
 		return fmt.Errorf("something went wrong while creating player %v from database: %v", playerId, err)
 	}
-	return nil
+
+	return core.createPlayerJoinsLobbyMessage(*context, lobbyId)
 }
 
 func (core CoreFacade) UpdatePlayer(context *util.Context, player *Player) error {
@@ -70,7 +71,7 @@ func (core CoreFacade) updatePlayer(context *util.Context, tx db.DBTx, player *P
 	if err := tx.UpdatePlayer(foundPlayer); err != nil {
 		return fmt.Errorf("something went wrong while updating player [%v]: %v", player.ID, err)
 	}
-	return nil
+	return core.createPlayerUpdatedMessage(*context, foundPlayer.LobbyId)
 }
 
 func (core CoreFacade) UpdatePlayerLastRefresh(playerId uuid.UUID) error {
@@ -128,7 +129,7 @@ func (core CoreFacade) deletePlayer(context *util.Context, tx db.DBTx, playerId 
 		} else {
 			context.Logger.Debugf("Player [%s] found to be the new owner of lobby [%s]", foundNewOwner.ID, player.LobbyId)
 			lobby.Owner = foundNewOwner
-			if err := core.updateLobby(tx, lobby); err != nil {
+			if err := core.updateLobby(context, tx, lobby); err != nil {
 				return err
 			}
 		}
@@ -136,7 +137,7 @@ func (core CoreFacade) deletePlayer(context *util.Context, tx db.DBTx, playerId 
 	if err := tx.DeletePlayer(playerId); err != nil {
 		return fmt.Errorf("error while deleting player [%v] from database: %v", playerId, err)
 	}
-	return nil
+	return core.createPlayerLeavesLobbyMessage(*context, player.LobbyId)
 }
 func (core CoreFacade) GetPlayer(playerId uuid.UUID) (*Player, error) {
 	tx, err := core.db.StartTransaction()
