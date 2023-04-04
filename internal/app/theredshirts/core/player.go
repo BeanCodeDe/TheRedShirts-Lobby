@@ -10,8 +10,8 @@ import (
 )
 
 func (core CoreFacade) CreatePlayer(context *util.Context, player *Player, password string) error {
-	tx, err := core.db.StartTransaction()
-	defer tx.HandleTransaction(err)
+	tx, err := core.startTransaction()
+	defer core.handleTransaction(tx, context, err)
 	if err != nil {
 		return fmt.Errorf("something went wrong while creating transaction: %v", err)
 	}
@@ -19,7 +19,7 @@ func (core CoreFacade) CreatePlayer(context *util.Context, player *Player, passw
 	return err
 }
 
-func (core CoreFacade) createPlayer(context *util.Context, tx db.DBTx, playerId uuid.UUID, playerName string, lobbyId uuid.UUID, password string, payload map[string]interface{}) error {
+func (core CoreFacade) createPlayer(context *util.Context, tx *transaction, playerId uuid.UUID, playerName string, lobbyId uuid.UUID, password string, payload map[string]interface{}) error {
 
 	player, err := core.getPlayer(tx, playerId)
 	if err != nil {
@@ -30,23 +30,25 @@ func (core CoreFacade) createPlayer(context *util.Context, tx db.DBTx, playerId 
 		return nil
 	}
 
-	lobby, err := tx.GetLobbyById(lobbyId)
+	lobby, err := tx.dbTx.GetLobbyById(lobbyId)
 	if err != nil {
 		return fmt.Errorf("something went wrong while loading lobby %v from database: %v", lobbyId, err)
 	}
 	if lobby.Password != password {
 		return ErrWrongLobbyPassword
 	}
-	if err := tx.CreatePlayer(&db.Player{ID: playerId, Name: playerName, LobbyId: lobbyId, LastRefresh: time.Now(), Payload: payload}); err != nil {
+	if err := tx.dbTx.CreatePlayer(&db.Player{ID: playerId, Name: playerName, LobbyId: lobbyId, LastRefresh: time.Now(), Payload: payload}); err != nil {
 		return fmt.Errorf("something went wrong while creating player %v from database: %v", playerId, err)
 	}
 
-	return core.createPlayerJoinsLobbyMessage(*context, lobbyId)
+	tx.messages = append(tx.messages, &message{senderPlayerId: playerId, lobbyId: lobbyId, topic: PLAYER_JOINS_LOBBY, payload: map[string]interface{}{"player_id": playerId}})
+
+	return nil
 }
 
 func (core CoreFacade) UpdatePlayer(context *util.Context, player *Player) error {
-	tx, err := core.db.StartTransaction()
-	defer tx.HandleTransaction(err)
+	tx, err := core.startTransaction()
+	defer core.handleTransaction(tx, context, err)
 	if err != nil {
 		return fmt.Errorf("something went wrong while creating transaction: %v", err)
 	}
@@ -54,9 +56,9 @@ func (core CoreFacade) UpdatePlayer(context *util.Context, player *Player) error
 	return err
 }
 
-func (core CoreFacade) updatePlayer(context *util.Context, tx db.DBTx, player *Player) error {
+func (core CoreFacade) updatePlayer(context *util.Context, tx *transaction, player *Player) error {
 
-	foundPlayer, err := tx.GetPlayerById(player.ID)
+	foundPlayer, err := tx.dbTx.GetPlayerById(player.ID)
 	if err != nil {
 		return err
 	}
@@ -68,15 +70,16 @@ func (core CoreFacade) updatePlayer(context *util.Context, tx db.DBTx, player *P
 	foundPlayer.LastRefresh = time.Now()
 	foundPlayer.Name = player.Name
 	foundPlayer.Payload = player.Payload
-	if err := tx.UpdatePlayer(foundPlayer); err != nil {
+	if err := tx.dbTx.UpdatePlayer(foundPlayer); err != nil {
 		return fmt.Errorf("something went wrong while updating player [%v]: %v", player.ID, err)
 	}
-	return core.createPlayerUpdatedMessage(*context, foundPlayer.LobbyId)
+	tx.messages = append(tx.messages, &message{senderPlayerId: foundPlayer.ID, lobbyId: foundPlayer.LobbyId, topic: PLAYER_UPDATED, payload: map[string]interface{}{"player_id": foundPlayer.ID}})
+	return nil
 }
 
-func (core CoreFacade) UpdatePlayerLastRefresh(playerId uuid.UUID) error {
-	tx, err := core.db.StartTransaction()
-	defer tx.HandleTransaction(err)
+func (core CoreFacade) UpdatePlayerLastRefresh(context *util.Context, playerId uuid.UUID) error {
+	tx, err := core.startTransaction()
+	defer core.handleTransaction(tx, context, err)
 	if err != nil {
 		return fmt.Errorf("something went wrong while creating transaction: %v", err)
 	}
@@ -84,23 +87,25 @@ func (core CoreFacade) UpdatePlayerLastRefresh(playerId uuid.UUID) error {
 	return err
 }
 
-func (core CoreFacade) updatePlayerLastRefresh(tx db.DBTx, playerId uuid.UUID) error {
+func (core CoreFacade) updatePlayerLastRefresh(tx *transaction, playerId uuid.UUID) error {
 
-	if err := tx.UpdatePlayerLastRefresh(playerId, time.Now()); err != nil {
+	if err := tx.dbTx.UpdatePlayerLastRefresh(playerId, time.Now()); err != nil {
 		return fmt.Errorf("something went wrong while updating last refresh of player [%v]: %v", playerId, err)
 	}
 	return nil
 }
 
 func (core CoreFacade) DeletePlayer(context *util.Context, playerId uuid.UUID) error {
-	tx, err := core.db.StartTransaction()
-	defer tx.HandleTransaction(err)
-
+	tx, err := core.startTransaction()
+	defer core.handleTransaction(tx, context, err)
+	if err != nil {
+		return fmt.Errorf("something went wrong while creating transaction: %v", err)
+	}
 	err = core.deletePlayer(context, tx, playerId)
 	return err
 }
 
-func (core CoreFacade) deletePlayer(context *util.Context, tx db.DBTx, playerId uuid.UUID) error {
+func (core CoreFacade) deletePlayer(context *util.Context, tx *transaction, playerId uuid.UUID) error {
 	context.Logger.Debugf("Delete player [%s]", playerId)
 	player, err := core.getPlayer(tx, playerId)
 	if err != nil {
@@ -134,21 +139,27 @@ func (core CoreFacade) deletePlayer(context *util.Context, tx db.DBTx, playerId 
 			}
 		}
 	}
-	if err := tx.DeletePlayer(playerId); err != nil {
+	if err := tx.dbTx.DeletePlayer(playerId); err != nil {
 		return fmt.Errorf("error while deleting player [%v] from database: %v", playerId, err)
 	}
-	return core.createPlayerLeavesLobbyMessage(*context, player.LobbyId)
+
+	tx.messages = append(tx.messages, &message{senderPlayerId: uuid.Nil, lobbyId: player.LobbyId, topic: PLAYER_LEAVES_LOBBY, payload: map[string]interface{}{"player_id": playerId}})
+
+	return nil
 }
-func (core CoreFacade) GetPlayer(playerId uuid.UUID) (*Player, error) {
-	tx, err := core.db.StartTransaction()
-	defer tx.HandleTransaction(err)
+func (core CoreFacade) GetPlayer(context *util.Context, playerId uuid.UUID) (*Player, error) {
+	tx, err := core.startTransaction()
+	defer core.handleTransaction(tx, context, err)
+	if err != nil {
+		return nil, fmt.Errorf("something went wrong while creating transaction: %v", err)
+	}
 
 	player, err := core.getPlayer(tx, playerId)
 	return player, err
 }
 
-func (core CoreFacade) getPlayer(tx db.DBTx, playerId uuid.UUID) (*Player, error) {
-	player, err := tx.GetPlayerById(playerId)
+func (core CoreFacade) getPlayer(tx *transaction, playerId uuid.UUID) (*Player, error) {
+	player, err := tx.dbTx.GetPlayerById(playerId)
 	if err != nil {
 		return nil, fmt.Errorf("something went wrong while loading player [%v] from database: %v", playerId, err)
 	}

@@ -13,15 +13,15 @@ import (
 )
 
 const (
-	player_table_name              = "player"
-	create_player_sql              = "INSERT INTO %s.%s(id, name, lobby_id, last_refresh, payload) VALUES($1, $2, $3, $4, $5)"
-	update_player_sql              = "UPDATE %s.%s SET name = $2, lobby_id = $3, last_refresh = $4, payload = $5  WHERE id = $1"
-	update_player_last_refresh_sql = "UPDATE %s.%s SET last_refresh = $2 WHERE id = $1"
-	delete_player_sql              = "DELETE FROM %s.%s WHERE id = $1"
-	delete_player_in_lobby_sql     = "DELETE FROM %s.%s WHERE lobby_id = $1"
-	delete_player_older_then_sql   = "DELETE FROM %s.%s WHERE last_refresh < $1"
-	select_player_by_player_id_sql = "SELECT id, name, lobby_id, payload FROM %s.%s WHERE id = $1"
-	select_player_by_lobby_id_sql  = "SELECT id, name, lobby_id, payload FROM %s.%s WHERE lobby_id = $1"
+	player_table_name                 = "player"
+	create_player_sql                 = "INSERT INTO %s.%s(id, name, lobby_id, last_refresh, payload) VALUES($1, $2, $3, $4, $5)"
+	update_player_sql                 = "UPDATE %s.%s SET name = $2, lobby_id = $3, last_refresh = $4, payload = $5  WHERE id = $1"
+	update_player_last_refresh_sql    = "UPDATE %s.%s SET last_refresh = $2 WHERE id = $1"
+	delete_player_sql                 = "DELETE FROM %s.%s WHERE id = $1"
+	delete_player_in_lobby_sql        = "DELETE FROM %s.%s WHERE lobby_id = $1"
+	select_player_by_player_id_sql    = "SELECT id, name, lobby_id, last_refresh, payload FROM %s.%s WHERE id = $1"
+	select_player_by_lobby_id_sql     = "SELECT id, name, lobby_id, last_refresh, payload FROM %s.%s WHERE lobby_id = $1"
+	select_player_by_last_refresh_sql = "SELECT id, name, lobby_id, last_refresh, payload FROM %s.%s WHERE last_refresh < $1"
 )
 
 var (
@@ -64,13 +64,6 @@ func (tx *postgresTransaction) DeletePlayer(id uuid.UUID) error {
 	return nil
 }
 
-func (tx *postgresTransaction) DeletePlayerOlderRefreshDate(time time.Time) error {
-	if _, err := tx.tx.Exec(context.Background(), fmt.Sprintf(delete_player_older_then_sql, schema_name, player_table_name), time); err != nil {
-		return fmt.Errorf("unknown error when deliting players older refreshe date: %v", err)
-	}
-	return nil
-}
-
 func (tx *postgresTransaction) DeleteAllPlayerInLobby(lobbyId uuid.UUID) error {
 	if _, err := tx.tx.Exec(context.Background(), fmt.Sprintf(delete_player_in_lobby_sql, schema_name, player_table_name), lobbyId); err != nil {
 		return fmt.Errorf("unknown error when deliting players from lobby: %v", err)
@@ -99,6 +92,15 @@ func (tx *postgresTransaction) GetAllPlayersInLobby(lobbyId uuid.UUID) ([]*Playe
 	var players []*Player
 	if err := pgxscan.Select(context.Background(), tx.tx, &players, fmt.Sprintf(select_player_by_lobby_id_sql, schema_name, player_table_name), lobbyId); err != nil {
 		return nil, fmt.Errorf("error while selecting all players in lobby: %v", err)
+	}
+
+	return players, nil
+}
+
+func (tx *postgresTransaction) GetPlayersLastRefresh(lastRefresh time.Time) ([]*Player, error) {
+	var players []*Player
+	if err := pgxscan.Select(context.Background(), tx.tx, &players, fmt.Sprintf(select_player_by_last_refresh_sql, schema_name, player_table_name), lastRefresh); err != nil {
+		return nil, fmt.Errorf("error while selecting players lastRefresh: %v", err)
 	}
 
 	return players, nil

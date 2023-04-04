@@ -13,8 +13,7 @@ import (
 
 type (
 	MessageAdapter struct {
-		ServerUrl     string
-		LobbyPlayerId uuid.UUID
+		ServerUrl string
 	}
 	Message struct {
 		Topic   string                 `json:"topic"`
@@ -33,15 +32,12 @@ const (
 
 func NewMessageAdapter() (*MessageAdapter, error) {
 	serverUrl := util.GetEnvWithFallback("MESSAGE_SERVER_URL", "http://theredshirts-message:1203")
-	lobbyPlayerId, err := util.GetEnvUUID("LOBBY_USER")
-	if err != nil {
-		return nil, fmt.Errorf("error while loading lobby user from env: %v", err)
-	}
-	return &MessageAdapter{ServerUrl: serverUrl, LobbyPlayerId: lobbyPlayerId}, nil
+
+	return &MessageAdapter{ServerUrl: serverUrl}, nil
 }
 
-func (adapter *MessageAdapter) CreateMessageId(context *util.Context, lobbyId uuid.UUID) (string, error) {
-	response, err := adapter.sendCreateMessageId(context, lobbyId, adapter.LobbyPlayerId)
+func (adapter *MessageAdapter) CreateMessageId(context *util.Context, lobbyId uuid.UUID, senderPlayerId uuid.UUID) (string, error) {
+	response, err := adapter.sendCreateMessageId(context, lobbyId, senderPlayerId)
 	if err != nil {
 		return "", fmt.Errorf("error while creating message id: %v", err)
 	}
@@ -60,8 +56,8 @@ func (adapter *MessageAdapter) CreateMessageId(context *util.Context, lobbyId uu
 	return msgId, nil
 }
 
-func (adapter *MessageAdapter) CreateMessage(context *util.Context, message *Message, lobbyId uuid.UUID, msgId string) error {
-	response, err := adapter.sendCreateMessage(context, message, lobbyId, adapter.LobbyPlayerId, msgId)
+func (adapter *MessageAdapter) CreateMessage(context *util.Context, message *Message, lobbyId uuid.UUID, msgId string, senderPlayerId uuid.UUID) error {
+	response, err := adapter.sendCreateMessage(context, message, lobbyId, senderPlayerId, msgId)
 	if err != nil {
 		return fmt.Errorf("error while creating message: %v", err)
 	}

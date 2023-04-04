@@ -171,10 +171,11 @@ func (api *EchoApi) deleteLobby(context echo.Context) error {
 }
 
 func (api *EchoApi) getAllLobbies(context echo.Context) error {
-	logger := context.Get(context_key).(*util.Context).Logger
+	customContext := context.Get(context_key).(*util.Context)
+	logger := customContext.Logger
 	logger.Debug("Get all lobbies")
 
-	lobbies, err := api.core.GetLobbies()
+	lobbies, err := api.core.GetLobbies(customContext)
 	if err != nil {
 		logger.Warnf("Error while loading lobby: %v", err)
 		return echo.ErrInternalServerError
@@ -183,7 +184,8 @@ func (api *EchoApi) getAllLobbies(context echo.Context) error {
 }
 
 func (api *EchoApi) getLobby(context echo.Context) error {
-	logger := context.Get(context_key).(*util.Context).Logger
+	customContext := context.Get(context_key).(*util.Context)
+	logger := customContext.Logger
 	logger.Debug("Get lobby")
 
 	lobbyId, err := getLobbyId(context)
@@ -192,7 +194,7 @@ func (api *EchoApi) getLobby(context echo.Context) error {
 		return echo.ErrBadRequest
 	}
 
-	lobby, err := api.core.GetLobby(lobbyId)
+	lobby, err := api.core.GetLobby(customContext, lobbyId)
 	if err != nil {
 		logger.Warnf("Error while loading lobby: %v", err)
 		return echo.ErrInternalServerError

@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/BeanCodeDe/TheRedShirts-Lobby/internal/app/theredshirts/db"
+	"github.com/BeanCodeDe/TheRedShirts-Lobby/internal/app/theredshirts/util"
 	"github.com/go-co-op/gocron"
+	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -14,31 +15,41 @@ func (core CoreFacade) startCleanUp() {
 	s := gocron.NewScheduler(time.UTC)
 
 	s.Every(10).Seconds().Do(func() {
-		tx, err := core.db.StartTransaction()
-		defer tx.HandleTransaction(err)
-		if err := core.cleanUpAfkPlayers(tx); err != nil {
-			log.Warn("Error while scheduling: %v", err)
+		correlationId := uuid.NewString()
+		logger := log.WithFields(log.Fields{
+			"Scavenger": correlationId,
+		})
+		context := &util.Context{CorrelationId: correlationId, Logger: logger}
+
+		tx, err := core.startTransaction()
+		defer core.handleTransaction(tx, context, err)
+		if err != nil {
+			logger.Warnf("something went wrong while creating transaction: %v", err)
 			return
 		}
-		if err := core.cleanUpEmptyLobbies(tx); err != nil {
+
+		if err := core.cleanUpAfkPlayers(context, tx); err != nil {
 			log.Warn("Error while scheduling: %v", err)
 			return
 		}
 	})
 
-	//s.StartAsync()
+	s.StartAsync()
 }
 
-func (core CoreFacade) cleanUpAfkPlayers(tx db.DBTx) error {
-	if err := tx.DeletePlayerOlderRefreshDate(time.Now().Add(time.Hour * -5)); err != nil {
+func (core CoreFacade) cleanUpAfkPlayers(context *util.Context, tx *transaction) error {
+	warningTime := time.Now().Add(time.Second * -5)
+	deleteTime := warningTime.Add(time.Second * -5)
+	players, err := tx.dbTx.GetPlayersLastRefresh(warningTime)
+	if err != nil {
 		return fmt.Errorf("error while cleaning up afk players: %v", err)
 	}
-	return nil
-}
-
-func (core CoreFacade) cleanUpEmptyLobbies(tx db.DBTx) error {
-	if err := tx.DeletePlayerOlderRefreshDate(time.Now().Add(time.Second * -5)); err != nil {
-		return fmt.Errorf("error while cleaning empty lobbies: %v", err)
+	for _, player := range players {
+		if player.LastRefresh.Before(deleteTime) {
+			core.deletePlayer(context, tx, player.ID)
+		} else {
+			tx.messages = append(tx.messages, &message{senderPlayerId: uuid.Nil, lobbyId: player.LobbyId, topic: PLAYER_LAGGING, payload: map[string]interface{}{"player_id": player.ID}})
+		}
 	}
 	return nil
 }

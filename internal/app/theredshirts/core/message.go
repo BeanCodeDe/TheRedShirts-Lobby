@@ -17,41 +17,32 @@ const (
 	PLAYER_LAGGING       = "PLAYER_LAGGING"
 )
 
-func (core CoreFacade) createPlayerJoinsLobbyMessage(context util.Context, lobbyId uuid.UUID) error {
-	return core.createMessage(&context, &adapter.Message{Topic: PLAYER_JOINS_LOBBY}, lobbyId)
+type message struct {
+	senderPlayerId uuid.UUID
+	lobbyId        uuid.UUID
+	topic          string
+	payload        map[string]interface{}
 }
 
-func (core CoreFacade) createPlayerLeavesLobbyMessage(context util.Context, lobbyId uuid.UUID) error {
-	return core.createMessage(&context, &adapter.Message{Topic: PLAYER_LEAVES_LOBBY}, lobbyId)
-}
-
-func (core CoreFacade) createPlayerUpdatesLobbyMessage(context util.Context, lobbyId uuid.UUID) error {
-	return core.createMessage(&context, &adapter.Message{Topic: PLAYER_UPDATES_LOBBY}, lobbyId)
-}
-
-func (core CoreFacade) createPlayerUpdatedMessage(context util.Context, lobbyId uuid.UUID) error {
-	return core.createMessage(&context, &adapter.Message{Topic: PLAYER_UPDATED}, lobbyId)
-}
-
-func (core CoreFacade) createPlayerLaggingMessage(context util.Context, lobbyId uuid.UUID) error {
-	return core.createMessage(&context, &adapter.Message{Topic: PLAYER_LAGGING}, lobbyId)
-}
-
-func (core CoreFacade) createMessageId(context *util.Context, lobbyId uuid.UUID) (string, error) {
-	msgId, err := core.messageAdapter.CreateMessageId(context, lobbyId)
+func (core CoreFacade) createMessageId(context *util.Context, lobbyId uuid.UUID, senderPlayerId uuid.UUID) (string, error) {
+	msgId, err := core.messageAdapter.CreateMessageId(context, lobbyId, senderPlayerId)
 	if err != nil {
 		return "", fmt.Errorf("error while creating message id: %v", err)
 	}
 	return msgId, nil
 }
 
-func (core CoreFacade) createMessage(context *util.Context, message *adapter.Message, lobbyId uuid.UUID) error {
-	msgId, err := core.createMessageId(context, lobbyId)
+func (core CoreFacade) createMessage(context *util.Context, message *message) error {
+	if message.senderPlayerId == uuid.Nil {
+		message.senderPlayerId = core.lobbyPlayerId
+	}
+
+	msgId, err := core.createMessageId(context, message.lobbyId, message.senderPlayerId)
 	if err != nil {
 		return err
 	}
-	if err := core.messageAdapter.CreateMessage(context, nil, lobbyId, msgId); err != nil {
-		return fmt.Errorf("error while sending message with topic %s: %v", message.Topic, err)
+	if err := core.messageAdapter.CreateMessage(context, &adapter.Message{Topic: message.topic, Message: message.payload}, message.lobbyId, msgId, message.senderPlayerId); err != nil {
+		return fmt.Errorf("error while sending message with topic %s: %v", message.topic, err)
 	}
 	return nil
 }

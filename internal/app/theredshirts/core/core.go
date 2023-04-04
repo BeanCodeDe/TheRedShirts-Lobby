@@ -17,19 +17,25 @@ type (
 	CoreFacade struct {
 		db             db.DB
 		messageAdapter *adapter.MessageAdapter
+		lobbyPlayerId  uuid.UUID
+	}
+
+	transaction struct {
+		dbTx     db.DBTx
+		messages []*message
 	}
 
 	Core interface {
 		CreateLobby(context *util.Context, lobby *Lobby) error
-		GetLobby(lobbyId uuid.UUID) (*Lobby, error)
+		GetLobby(context *util.Context, lobbyId uuid.UUID) (*Lobby, error)
 		UpdateLobby(context *util.Context, lobby *Lobby) error
 		UpdateLobbyStatus(context *util.Context, lobby *Lobby) error
-		GetLobbies() ([]*Lobby, error)
+		GetLobbies(context *util.Context) ([]*Lobby, error)
 		DeleteLobby(context *util.Context, lobbyId uuid.UUID, ownerId uuid.UUID) error
 		CreatePlayer(context *util.Context, join *Player, password string) error
-		GetPlayer(playerId uuid.UUID) (*Player, error)
+		GetPlayer(context *util.Context, playerId uuid.UUID) (*Player, error)
 		UpdatePlayer(context *util.Context, player *Player) error
-		UpdatePlayerLastRefresh(playerId uuid.UUID) error
+		UpdatePlayerLastRefresh(context *util.Context, playerId uuid.UUID) error
 		DeletePlayer(context *util.Context, playerId uuid.UUID) error
 	}
 
@@ -76,7 +82,31 @@ func NewCore() (Core, error) {
 	if err != nil {
 		return nil, fmt.Errorf("erro while initializing messageadapter: %v", err)
 	}
-	core := &CoreFacade{db: db, messageAdapter: messageAdapter}
+	lobbyPlayerId, err := util.GetEnvUUID("LOBBY_USER")
+	if err != nil {
+		return nil, fmt.Errorf("error while loading lobby user from env: %v", err)
+	}
+	core := &CoreFacade{db: db, messageAdapter: messageAdapter, lobbyPlayerId: lobbyPlayerId}
 	core.startCleanUp()
 	return core, nil
+}
+
+func (core CoreFacade) startTransaction() (*transaction, error) {
+	tx, err := core.db.StartTransaction()
+	if err != nil {
+		return nil, fmt.Errorf("error while starting transaction: %v", err)
+	}
+	return &transaction{dbTx: tx, messages: make([]*message, 0)}, nil
+}
+
+func (core CoreFacade) handleTransaction(tx *transaction, context *util.Context, err error) {
+	tx.dbTx.HandleTransaction(err)
+	if err == nil {
+		for _, message := range tx.messages {
+			err := core.createMessage(context, message)
+			if err != nil {
+				context.Logger.Warnf("Error while creating message after transaction: %v", err)
+			}
+		}
+	}
 }

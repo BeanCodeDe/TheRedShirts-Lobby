@@ -118,7 +118,7 @@ func (api *EchoApi) updateLastRefreshPlayer(context echo.Context) error {
 		return echo.ErrBadRequest
 	}
 
-	err = api.core.UpdatePlayerLastRefresh(updatePlayer.ID)
+	err = api.core.UpdatePlayerLastRefresh(customContext, updatePlayer.ID)
 
 	if err != nil {
 		if errors.Is(err, core.ErrWrongLobbyPassword) {
@@ -143,7 +143,7 @@ func (api *EchoApi) getPlayer(context echo.Context) error {
 		return echo.ErrBadRequest
 	}
 
-	player, err := api.core.GetPlayer(playerId.ID)
+	player, err := api.core.GetPlayer(customContext, playerId.ID)
 	if err != nil {
 		logger.Warnf("Error while getting player [%v]: %v", playerId.ID, err)
 		return echo.ErrInternalServerError
