@@ -10,6 +10,7 @@ import (
 )
 
 func (core CoreFacade) CreateLobby(context *util.Context, lobby *Lobby) error {
+	context.Logger.Debugf("Creating lobby %+v:", *lobby)
 	tx, err := core.startTransaction()
 	defer core.handleTransaction(tx, context, err)
 	lobby.Status = lobby_open
@@ -43,6 +44,7 @@ func (core CoreFacade) createLobby(tx *transaction, context *util.Context, lobby
 }
 
 func (core CoreFacade) UpdateLobby(context *util.Context, lobby *Lobby) error {
+	context.Logger.Debugf("Updating lobby %+v:", *lobby)
 	tx, err := core.startTransaction()
 	defer core.handleTransaction(tx, context, err)
 
@@ -87,6 +89,7 @@ func (core CoreFacade) updateLobby(context *util.Context, tx *transaction, lobby
 }
 
 func (core CoreFacade) UpdateLobbyStatus(context *util.Context, lobby *Lobby) error {
+	context.Logger.Debugf("Updating lobby status %+v:", *lobby)
 	tx, err := core.startTransaction()
 	defer core.handleTransaction(tx, context, err)
 	err = core.updateLobbyStatus(context, tx, lobby)
@@ -116,6 +119,7 @@ func (core CoreFacade) updateLobbyStatus(context *util.Context, tx *transaction,
 }
 
 func (core CoreFacade) DeleteLobby(context *util.Context, lobbyId uuid.UUID, ownerId uuid.UUID) error {
+	context.Logger.Debugf("Deleting lobby: LobbyId [%v], OwnerId [%v]", lobbyId, ownerId)
 	tx, err := core.startTransaction()
 	defer core.handleTransaction(tx, context, err)
 	if err != nil {
@@ -128,7 +132,7 @@ func (core CoreFacade) DeleteLobby(context *util.Context, lobbyId uuid.UUID, own
 func (core CoreFacade) deleteLobby(tx *transaction, context *util.Context, lobbyId uuid.UUID, ownerId uuid.UUID) error {
 	lobby, err := tx.dbTx.GetLobbyById(lobbyId)
 	if err != nil {
-		return fmt.Errorf("an error accourd while deleting all players from lobby [%v]: %v", lobbyId, err)
+		return fmt.Errorf("an error accourd while loading lobby [%v]: %v", lobbyId, err)
 	}
 
 	if lobby == nil {
@@ -139,10 +143,6 @@ func (core CoreFacade) deleteLobby(tx *transaction, context *util.Context, lobby
 		return fmt.Errorf("player [%v] is not owner [%v] of the lobby [%v]", ownerId, lobby.Owner, lobbyId)
 	}
 
-	if err := tx.dbTx.DeleteAllPlayerInLobby(lobbyId); err != nil {
-		return fmt.Errorf("an error accourd while deleting all players from lobby [%v]: %v", lobbyId, err)
-	}
-
 	if err := tx.dbTx.DeleteLobby(lobbyId); err != nil {
 		return fmt.Errorf("an error accourd while deleting lobby [%v]: %v", lobbyId, err)
 	}
@@ -150,6 +150,7 @@ func (core CoreFacade) deleteLobby(tx *transaction, context *util.Context, lobby
 }
 
 func (core CoreFacade) GetLobby(context *util.Context, lobbyId uuid.UUID) (*Lobby, error) {
+	context.Logger.Debugf("Get lobby: LobbyId [%v]", lobbyId)
 	tx, err := core.startTransaction()
 	defer core.handleTransaction(tx, context, err)
 

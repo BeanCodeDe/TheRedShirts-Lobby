@@ -39,7 +39,7 @@ func (core CoreFacade) startCleanUp() {
 
 func (core CoreFacade) cleanUpAfkPlayers(context *util.Context, tx *transaction) error {
 	warningTime := time.Now().Add(time.Second * -5)
-	deleteTime := warningTime.Add(time.Second * -5)
+	deleteTime := warningTime.Add(time.Second * -10)
 	players, err := tx.dbTx.GetPlayersLastRefresh(warningTime)
 	if err != nil {
 		return fmt.Errorf("error while cleaning up afk players: %v", err)

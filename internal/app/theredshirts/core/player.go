@@ -10,6 +10,7 @@ import (
 )
 
 func (core CoreFacade) CreatePlayer(context *util.Context, player *Player, password string) error {
+	context.Logger.Debugf("Creating Player: %+v", *player)
 	tx, err := core.startTransaction()
 	defer core.handleTransaction(tx, context, err)
 	if err != nil {
@@ -47,6 +48,7 @@ func (core CoreFacade) createPlayer(context *util.Context, tx *transaction, play
 }
 
 func (core CoreFacade) UpdatePlayer(context *util.Context, player *Player) error {
+	context.Logger.Debugf("Updating Player: %+v", *player)
 	tx, err := core.startTransaction()
 	defer core.handleTransaction(tx, context, err)
 	if err != nil {
@@ -78,6 +80,7 @@ func (core CoreFacade) updatePlayer(context *util.Context, tx *transaction, play
 }
 
 func (core CoreFacade) UpdatePlayerLastRefresh(context *util.Context, playerId uuid.UUID) error {
+	context.Logger.Debugf("Updating Player last refresh [%v]", playerId)
 	tx, err := core.startTransaction()
 	defer core.handleTransaction(tx, context, err)
 	if err != nil {
@@ -96,6 +99,7 @@ func (core CoreFacade) updatePlayerLastRefresh(tx *transaction, playerId uuid.UU
 }
 
 func (core CoreFacade) DeletePlayer(context *util.Context, playerId uuid.UUID) error {
+	context.Logger.Debugf("Deleting Player [%v]", playerId)
 	tx, err := core.startTransaction()
 	defer core.handleTransaction(tx, context, err)
 	if err != nil {
@@ -123,10 +127,16 @@ func (core CoreFacade) deletePlayer(context *util.Context, tx *transaction, play
 	}
 
 	if lobby.Owner.ID == playerId {
-		context.Logger.Debugf("Player who is leaving is also owner of lobby [%s]", player.LobbyId)
+		context.Logger.Debugf("Player who is leaving the lobby is also owner of lobby [%s]", player.LobbyId)
 		foundNewOwner := findPlayerNot(lobby.Players, playerId)
 		if foundNewOwner == nil {
 			context.Logger.Debugf("No new owner found. Deleting lobby [%s]", player.LobbyId)
+			if err := tx.dbTx.DeletePlayer(playerId); err != nil {
+				return fmt.Errorf("error while deleting player [%v] from database: %v", playerId, err)
+			}
+
+			tx.messages = append(tx.messages, &message{senderPlayerId: uuid.Nil, lobbyId: player.LobbyId, topic: PLAYER_LEAVES_LOBBY, payload: map[string]interface{}{"player_id": playerId}})
+
 			if err := core.deleteLobby(tx, context, player.LobbyId, playerId); err != nil {
 				return err
 			}
@@ -148,6 +158,7 @@ func (core CoreFacade) deletePlayer(context *util.Context, tx *transaction, play
 	return nil
 }
 func (core CoreFacade) GetPlayer(context *util.Context, playerId uuid.UUID) (*Player, error) {
+	context.Logger.Debugf("Getting Player [%v]", playerId)
 	tx, err := core.startTransaction()
 	defer core.handleTransaction(tx, context, err)
 	if err != nil {
