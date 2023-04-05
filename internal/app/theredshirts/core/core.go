@@ -60,6 +60,7 @@ type (
 		Name        string
 		LastRefresh time.Time
 		LobbyId     uuid.UUID
+		Spectator   bool
 		Payload     map[string]interface{}
 	}
 )
@@ -71,6 +72,7 @@ const (
 
 var (
 	ErrWrongLobbyPassword = errors.New("wrong password")
+	ErrLobbyFull          = errors.New("lobby is full")
 )
 
 func NewCore() (Core, error) {

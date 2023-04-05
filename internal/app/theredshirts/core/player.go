@@ -35,9 +35,20 @@ func (core CoreFacade) createPlayer(context *util.Context, tx *transaction, play
 	if err != nil {
 		return fmt.Errorf("something went wrong while loading lobby %v from database: %v", lobbyId, err)
 	}
+
 	if lobby.Password != password {
 		return ErrWrongLobbyPassword
 	}
+
+	playerCount, err := tx.dbTx.GetNumberOfPlayersInLobby(lobbyId)
+	if err != nil {
+		return fmt.Errorf("something went wrong while loading number of players from lobby %v from database: %v", lobbyId, err)
+	}
+
+	if lobby.MaxPlayers <= playerCount {
+		return ErrLobbyFull
+	}
+
 	if err := tx.dbTx.CreatePlayer(&db.Player{ID: playerId, Name: playerName, LobbyId: lobbyId, LastRefresh: time.Now(), Payload: payload}); err != nil {
 		return fmt.Errorf("something went wrong while creating player %v from database: %v", playerId, err)
 	}
@@ -69,9 +80,27 @@ func (core CoreFacade) updatePlayer(context *util.Context, tx *transaction, play
 		return fmt.Errorf("player [%v] not found", player.ID)
 	}
 
+	if foundPlayer.Spectator != player.Spectator && !player.Spectator {
+		playerCount, err := tx.dbTx.GetNumberOfPlayersInLobby(foundPlayer.LobbyId)
+		if err != nil {
+			return fmt.Errorf("something went wrong while loading number of players from lobby %v from database: %v", player.LobbyId, err)
+		}
+
+		lobby, err := tx.dbTx.GetLobbyById(player.LobbyId)
+		if err != nil {
+			return fmt.Errorf("something went wrong while loading lobby %v from database: %v", player.LobbyId, err)
+		}
+
+		if lobby.MaxPlayers <= playerCount {
+			return ErrLobbyFull
+		}
+	}
+
 	foundPlayer.LastRefresh = time.Now()
 	foundPlayer.Name = player.Name
+	foundPlayer.Spectator = player.Spectator
 	foundPlayer.Payload = player.Payload
+
 	if err := tx.dbTx.UpdatePlayer(foundPlayer); err != nil {
 		return fmt.Errorf("something went wrong while updating player [%v]: %v", player.ID, err)
 	}
@@ -181,7 +210,7 @@ func mapToPlayer(player *db.Player) *Player {
 	if player == nil {
 		return nil
 	}
-	return &Player{ID: player.ID, Name: player.Name, LastRefresh: player.LastRefresh, LobbyId: player.LobbyId, Payload: player.Payload}
+	return &Player{ID: player.ID, Name: player.Name, LastRefresh: player.LastRefresh, LobbyId: player.LobbyId, Spectator: player.Spectator, Payload: player.Payload}
 }
 
 func mapToPlayers(dbPlayers []*db.Player) []*Player {

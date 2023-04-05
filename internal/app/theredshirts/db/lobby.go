@@ -16,7 +16,6 @@ const (
 	create_lobby_sql       = "INSERT INTO %s.%s(id, status, name, owner, password, difficulty, mission_length, number_of_crew_members, max_players, expansion_packs, payload) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"
 	update_lobby_sql       = "UPDATE %s.%s SET status = $2, name = $3, owner = $4, password = $5, difficulty = $6, mission_length = $7, number_of_crew_members = $8, max_players = $9, expansion_packs = $10, payload = $11 WHERE id = $1"
 	delete_lobby_sql       = "DELETE FROM %s.%s WHERE id = $1"
-	delete_empty_lobby_sql = "DELETE FROM %s.%s WHERE NOT EXISTS (SELECT 1 FROM %s.%s AS p WHERE p.lobby_id = lobby.id)"
 	select_lobby_by_id_sql = "SELECT id, status, name, owner, password, difficulty, mission_length, number_of_crew_members, max_players, expansion_packs, payload FROM %s.%s WHERE id = $1"
 	select_lobby_sql       = "SELECT id, status, name, owner, password, difficulty, mission_length, number_of_crew_members, max_players, expansion_packs, payload FROM %s.%s"
 )
@@ -49,13 +48,6 @@ func (tx *postgresTransaction) UpdateLobby(lobby *Lobby) error {
 
 func (tx *postgresTransaction) DeleteLobby(id uuid.UUID) error {
 	if _, err := tx.tx.Exec(context.Background(), fmt.Sprintf(delete_lobby_sql, schema_name, lobby_table_name), id); err != nil {
-		return fmt.Errorf("unknown error when deliting lobby: %v", err)
-	}
-	return nil
-}
-
-func (tx *postgresTransaction) DeleteEmptyLobbies() error {
-	if _, err := tx.tx.Exec(context.Background(), fmt.Sprintf(delete_empty_lobby_sql, schema_name, lobby_table_name, schema_name, player_table_name)); err != nil {
 		return fmt.Errorf("unknown error when deliting lobby: %v", err)
 	}
 	return nil

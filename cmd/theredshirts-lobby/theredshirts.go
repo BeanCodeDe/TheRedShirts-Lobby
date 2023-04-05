@@ -2,12 +2,12 @@ package main
 
 import (
 	"github.com/BeanCodeDe/TheRedShirts-Lobby/internal/app/theredshirts/api"
-	"github.com/BeanCodeDe/TheRedShirts-Lobby/internal/app/theredshirts/config"
+	"github.com/BeanCodeDe/TheRedShirts-Lobby/internal/app/theredshirts/util"
 	log "github.com/sirupsen/logrus"
 )
 
 func main() {
-	setLogLevel(config.LogLevel)
+	setLogLevel(util.GetEnvWithFallback("LOG_LEVEL", "debug"))
 	log.Info("Start Server")
 	_, err := api.NewApi()
 	if err != nil {

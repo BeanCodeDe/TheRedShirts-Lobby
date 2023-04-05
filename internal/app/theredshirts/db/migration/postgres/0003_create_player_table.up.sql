@@ -3,5 +3,6 @@ CREATE TABLE theredshirts_lobby.player (
     name varchar NOT NULL,
     lobby_id uuid NOT NULL REFERENCES theredshirts_lobby.lobby(id),
     last_refresh timestamp NOT NULL,
+    spectator boolean NOT NULL,
     payload json
 );

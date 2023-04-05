@@ -19,17 +19,19 @@ const (
 
 type (
 	PlayerCreate struct {
-		ID       uuid.UUID              `param:"playerId" validate:"required"`
-		Name     string                 `json:"name" validate:"required"`
-		LobbyId  uuid.UUID              `json:"lobby_id" validate:"required"`
-		Password string                 `json:"password"`
-		Payload  map[string]interface{} `json:"payload"`
+		ID        uuid.UUID              `param:"playerId" validate:"required"`
+		Name      string                 `json:"name" validate:"required"`
+		LobbyId   uuid.UUID              `json:"lobby_id" validate:"required"`
+		Password  string                 `json:"password"`
+		Spectator bool                   `json:"spectator"`
+		Payload   map[string]interface{} `json:"payload"`
 	}
 
 	PlayerUpdate struct {
-		ID      uuid.UUID              `param:"playerId" validate:"required"`
-		Name    string                 `json:"name" validate:"required"`
-		Payload map[string]interface{} `json:"payload"`
+		ID        uuid.UUID              `param:"playerId" validate:"required"`
+		Name      string                 `json:"name" validate:"required"`
+		Spectator bool                   `json:"spectator"`
+		Payload   map[string]interface{} `json:"payload"`
 	}
 
 	PlayerId struct {
@@ -37,15 +39,17 @@ type (
 	}
 
 	Player struct {
-		ID      uuid.UUID              `json:"id" validate:"required"`
-		Name    string                 `json:"name" validate:"required"`
-		Payload map[string]interface{} `json:"payload"`
+		ID        uuid.UUID              `json:"id" validate:"required"`
+		Name      string                 `json:"name" validate:"required"`
+		Spectator bool                   `json:"spectator"`
+		Payload   map[string]interface{} `json:"payload"`
 	}
 
 	SimplePlayer struct {
-		ID      uuid.UUID `json:"id" `
-		Name    string    `json:"name" `
-		LobbyId uuid.UUID `json:"lobby_id"`
+		ID        uuid.UUID `json:"id"`
+		Name      string    `json:"name"`
+		Spectator bool      `json:"spectator"`
+		LobbyId   uuid.UUID `json:"lobby_id"`
 	}
 )
 
@@ -75,6 +79,10 @@ func (api *EchoApi) createPlayer(context echo.Context) error {
 			logger.Infof("Player enterd wrong lobby password: %v", err)
 			return echo.ErrUnauthorized
 		}
+		if errors.Is(err, core.ErrLobbyFull) {
+			logger.Infof("Lobby is full. player cant change state: %v", err)
+			return echo.ErrConflict
+		}
 		logger.Warnf("Error while joining lobby: %v", err)
 		return echo.ErrInternalServerError
 	}
@@ -96,9 +104,9 @@ func (api *EchoApi) updatePlayer(context echo.Context) error {
 	err = api.core.UpdatePlayer(customContext, mapUpdatePlayerToCorePlayer(updatePlayer))
 
 	if err != nil {
-		if errors.Is(err, core.ErrWrongLobbyPassword) {
-			logger.Infof("Player enterd wrong lobby password: %v", err)
-			return echo.ErrUnauthorized
+		if errors.Is(err, core.ErrLobbyFull) {
+			logger.Infof("Lobby is full. player cant change state: %v", err)
+			return echo.ErrConflict
 		}
 		logger.Warnf("Error while joining lobby: %v", err)
 		return echo.ErrInternalServerError
@@ -208,11 +216,11 @@ func bindPlayerId(context echo.Context) (player *PlayerId, err error) {
 }
 
 func mapCreatePlayerToPlayer(player *PlayerCreate) *core.Player {
-	return &core.Player{ID: player.ID, LobbyId: player.LobbyId, Name: player.Name, Payload: player.Payload}
+	return &core.Player{ID: player.ID, LobbyId: player.LobbyId, Name: player.Name, Spectator: player.Spectator, Payload: player.Payload}
 }
 
 func mapUpdatePlayerToCorePlayer(player *PlayerUpdate) *core.Player {
-	return &core.Player{ID: player.ID, Name: player.Name, Payload: player.Payload}
+	return &core.Player{ID: player.ID, Name: player.Name, Spectator: player.Spectator, Payload: player.Payload}
 }
 
 func mapToPlayers(corePlayers []*core.Player) []*Player {
@@ -227,7 +235,7 @@ func mapToPlayer(player *core.Player) *Player {
 	if player == nil {
 		return nil
 	}
-	return &Player{ID: player.ID, Name: player.Name, Payload: player.Payload}
+	return &Player{ID: player.ID, Name: player.Name, Spectator: player.Spectator, Payload: player.Payload}
 }
 
 func mapToSimplePlayer(player *core.Player) *SimplePlayer {
@@ -240,5 +248,5 @@ func mapToCorePlayer(player *Player) *core.Player {
 	if player == nil {
 		return nil
 	}
-	return &core.Player{ID: player.ID, Name: player.Name, Payload: player.Payload}
+	return &core.Player{ID: player.ID, Name: player.Name, Spectator: player.Spectator, Payload: player.Payload}
 }

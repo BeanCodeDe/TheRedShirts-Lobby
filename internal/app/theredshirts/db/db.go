@@ -29,6 +29,7 @@ type (
 		Name        string                 `db:"name"`
 		LobbyId     uuid.UUID              `db:"lobby_id"`
 		LastRefresh time.Time              `db:"last_refresh"`
+		Spectator   bool                   `db:"spectator"`
 		Payload     map[string]interface{} `db:"payload"`
 	}
 
@@ -43,7 +44,6 @@ type (
 		CreateLobby(lobby *Lobby) error
 		UpdateLobby(lobby *Lobby) error
 		DeleteLobby(id uuid.UUID) error
-		DeleteEmptyLobbies() error
 		GetLobbyById(id uuid.UUID) (*Lobby, error)
 		GetAllLobbies() ([]*Lobby, error)
 		//Player
@@ -55,6 +55,7 @@ type (
 		GetPlayerById(id uuid.UUID) (*Player, error)
 		GetAllPlayersInLobby(lobbyId uuid.UUID) ([]*Player, error)
 		GetPlayersLastRefresh(lastRefresh time.Time) ([]*Player, error)
+		GetNumberOfPlayersInLobby(lobbyId uuid.UUID) (int, error)
 	}
 )
 
