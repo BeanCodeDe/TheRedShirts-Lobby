@@ -46,7 +46,10 @@ func (core CoreFacade) cleanUpAfkPlayers(context *util.Context, tx *transaction)
 	}
 	for _, player := range players {
 		if player.LastRefresh.Before(deleteTime) {
-			core.deletePlayer(context, tx, player.ID)
+			err := core.deletePlayer(context, tx, player.ID)
+			if err != nil {
+				return err
+			}
 		} else {
 			tx.messages = append(tx.messages, &message{senderPlayerId: uuid.Nil, lobbyId: player.LobbyId, topic: PLAYER_LAGGING, payload: map[string]interface{}{"player_id": player.ID}})
 		}
