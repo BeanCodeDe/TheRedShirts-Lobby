@@ -22,15 +22,18 @@ func (core CoreFacade) startCleanUp() {
 		context := &util.Context{CorrelationId: correlationId, Logger: logger}
 
 		tx, err := core.startTransaction()
-		defer core.handleTransaction(tx, context, err)
 		if err != nil {
 			logger.Warnf("something went wrong while creating transaction: %v", err)
 			return
 		}
+		defer core.rollback(tx)
 
 		if err := core.cleanUpAfkPlayers(context, tx); err != nil {
 			log.Warn("Error while scheduling: %v", err)
 			return
+		}
+		if err := core.commit(tx, context); err != nil {
+			log.Warn("Error while committing changes: %v", err)
 		}
 	})
 

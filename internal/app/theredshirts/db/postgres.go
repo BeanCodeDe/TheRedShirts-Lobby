@@ -92,10 +92,10 @@ func (db *postgresConnection) StartTransaction() (DBTx, error) {
 
 }
 
-func (tx *postgresTransaction) HandleTransaction(err error) {
-	if err != nil {
-		tx.tx.Rollback(context.Background())
-	} else {
-		tx.tx.Commit(context.Background())
-	}
+func (tx *postgresTransaction) Commit() error {
+	return tx.tx.Commit(context.Background())
+}
+
+func (tx *postgresTransaction) Rollback() error {
+	return tx.tx.Rollback(context.Background())
 }

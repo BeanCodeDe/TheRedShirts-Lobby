@@ -12,15 +12,18 @@ import (
 func (core CoreFacade) CreatePlayer(context *util.Context, player *Player, password string) error {
 	context.Logger.Debugf("Creating Player: %+v", *player)
 	tx, err := core.startTransaction()
-	defer core.handleTransaction(tx, context, err)
 	if err != nil {
-		return fmt.Errorf("something went wrong while creating transaction: %v", err)
+		return err
 	}
-	err = core.createPlayer(context, tx, player.ID, player.Name, player.LobbyId, password, player.Payload)
-	return err
+	defer core.rollback(tx)
+
+	if err := core.createPlayer(context, tx, player.ID, player.Name, player.LobbyId, password, player.Spectator, player.Payload); err != nil {
+		return err
+	}
+	return core.commit(tx, context)
 }
 
-func (core CoreFacade) createPlayer(context *util.Context, tx *transaction, playerId uuid.UUID, playerName string, lobbyId uuid.UUID, password string, payload map[string]interface{}) error {
+func (core CoreFacade) createPlayer(context *util.Context, tx *transaction, playerId uuid.UUID, playerName string, lobbyId uuid.UUID, password string, spectator bool, payload map[string]interface{}) error {
 
 	player, err := core.getPlayer(tx, playerId)
 	if err != nil {
@@ -28,6 +31,9 @@ func (core CoreFacade) createPlayer(context *util.Context, tx *transaction, play
 	}
 
 	if player != nil {
+		if player.Name != playerName || player.LobbyId != lobbyId || player.Spectator != spectator {
+			return fmt.Errorf("Player already exists with different parameters")
+		}
 		return nil
 	}
 
@@ -49,11 +55,11 @@ func (core CoreFacade) createPlayer(context *util.Context, tx *transaction, play
 		return ErrLobbyFull
 	}
 
-	if err := tx.dbTx.CreatePlayer(&db.Player{ID: playerId, Name: playerName, LobbyId: lobbyId, LastRefresh: time.Now(), Payload: payload}); err != nil {
+	if err := tx.dbTx.CreatePlayer(&db.Player{ID: playerId, Name: playerName, LobbyId: lobbyId, LastRefresh: time.Now(), Spectator: spectator, Payload: payload}); err != nil {
 		return fmt.Errorf("something went wrong while creating player %v from database: %v", playerId, err)
 	}
 
-	tx.messages = append(tx.messages, &message{senderPlayerId: playerId, lobbyId: lobbyId, topic: PLAYER_JOINS_LOBBY, payload: map[string]interface{}{"player_id": playerId}})
+	tx.messages = append(tx.messages, &message{senderPlayerId: playerId, lobbyId: lobbyId, topic: PLAYER_JOINS_LOBBY, payload: map[string]interface{}{"player_id": playerId, "player_name": playerName, "spectator": spectator}})
 
 	return nil
 }
@@ -61,12 +67,14 @@ func (core CoreFacade) createPlayer(context *util.Context, tx *transaction, play
 func (core CoreFacade) UpdatePlayer(context *util.Context, player *Player) error {
 	context.Logger.Debugf("Updating Player: %+v", *player)
 	tx, err := core.startTransaction()
-	defer core.handleTransaction(tx, context, err)
 	if err != nil {
-		return fmt.Errorf("something went wrong while creating transaction: %v", err)
+		return err
 	}
-	err = core.updatePlayer(context, tx, player)
-	return err
+	defer core.rollback(tx)
+	if err := core.updatePlayer(context, tx, player); err != nil {
+		return err
+	}
+	return core.commit(tx, context)
 }
 
 func (core CoreFacade) updatePlayer(context *util.Context, tx *transaction, player *Player) error {
@@ -111,12 +119,14 @@ func (core CoreFacade) updatePlayer(context *util.Context, tx *transaction, play
 func (core CoreFacade) UpdatePlayerLastRefresh(context *util.Context, playerId uuid.UUID) error {
 	context.Logger.Debugf("Updating Player last refresh [%v]", playerId)
 	tx, err := core.startTransaction()
-	defer core.handleTransaction(tx, context, err)
 	if err != nil {
-		return fmt.Errorf("something went wrong while creating transaction: %v", err)
+		return err
 	}
-	err = core.updatePlayerLastRefresh(tx, playerId)
-	return err
+	defer core.rollback(tx)
+	if err := core.updatePlayerLastRefresh(tx, playerId); err != nil {
+		return err
+	}
+	return core.commit(tx, context)
 }
 
 func (core CoreFacade) updatePlayerLastRefresh(tx *transaction, playerId uuid.UUID) error {
@@ -130,12 +140,14 @@ func (core CoreFacade) updatePlayerLastRefresh(tx *transaction, playerId uuid.UU
 func (core CoreFacade) DeletePlayer(context *util.Context, playerId uuid.UUID) error {
 	context.Logger.Debugf("Deleting Player [%v]", playerId)
 	tx, err := core.startTransaction()
-	defer core.handleTransaction(tx, context, err)
 	if err != nil {
-		return fmt.Errorf("something went wrong while creating transaction: %v", err)
+		return err
 	}
-	err = core.deletePlayer(context, tx, playerId)
-	return err
+	defer core.rollback(tx)
+	if err := core.deletePlayer(context, tx, playerId); err != nil {
+		return err
+	}
+	return core.commit(tx, context)
 }
 
 func (core CoreFacade) deletePlayer(context *util.Context, tx *transaction, playerId uuid.UUID) error {
@@ -189,13 +201,16 @@ func (core CoreFacade) deletePlayer(context *util.Context, tx *transaction, play
 func (core CoreFacade) GetPlayer(context *util.Context, playerId uuid.UUID) (*Player, error) {
 	context.Logger.Debugf("Getting Player [%v]", playerId)
 	tx, err := core.startTransaction()
-	defer core.handleTransaction(tx, context, err)
 	if err != nil {
-		return nil, fmt.Errorf("something went wrong while creating transaction: %v", err)
+		return nil, err
 	}
+	defer core.rollback(tx)
 
 	player, err := core.getPlayer(tx, playerId)
-	return player, err
+	if err != nil {
+		return nil, err
+	}
+	return player, core.commit(tx, context)
 }
 
 func (core CoreFacade) getPlayer(tx *transaction, playerId uuid.UUID) (*Player, error) {

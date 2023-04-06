@@ -12,10 +12,15 @@ import (
 func (core CoreFacade) CreateLobby(context *util.Context, lobby *Lobby) error {
 	context.Logger.Debugf("Creating lobby %+v:", *lobby)
 	tx, err := core.startTransaction()
-	defer core.handleTransaction(tx, context, err)
+	if err != nil {
+		return err
+	}
+	defer core.rollback(tx)
 	lobby.Status = lobby_open
-	err = core.createLobby(tx, context, lobby)
-	return err
+	if err := core.createLobby(tx, context, lobby); err != nil {
+		return err
+	}
+	return core.commit(tx, context)
 }
 
 func (core CoreFacade) createLobby(tx *transaction, context *util.Context, lobby *Lobby) error {
@@ -36,7 +41,7 @@ func (core CoreFacade) createLobby(tx *transaction, context *util.Context, lobby
 
 	}
 
-	if err := core.createPlayer(context, tx, lobby.Owner.ID, lobby.Owner.Name, lobby.ID, lobby.Password, lobby.Owner.Payload); err != nil {
+	if err := core.createPlayer(context, tx, lobby.Owner.ID, lobby.Owner.Name, lobby.ID, lobby.Password, lobby.Owner.Spectator, lobby.Owner.Payload); err != nil {
 		return err
 	}
 
@@ -46,7 +51,10 @@ func (core CoreFacade) createLobby(tx *transaction, context *util.Context, lobby
 func (core CoreFacade) UpdateLobby(context *util.Context, lobby *Lobby) error {
 	context.Logger.Debugf("Updating lobby %+v:", *lobby)
 	tx, err := core.startTransaction()
-	defer core.handleTransaction(tx, context, err)
+	if err != nil {
+		return err
+	}
+	defer core.rollback(tx)
 
 	dbLobby, err := tx.dbTx.GetLobbyById(lobby.ID)
 	if err != nil {
@@ -57,8 +65,11 @@ func (core CoreFacade) UpdateLobby(context *util.Context, lobby *Lobby) error {
 		return fmt.Errorf("player [%v] is not owner [%v] of the lobby [%v]", lobby.Owner.ID, dbLobby.Owner, lobby.ID)
 	}
 
-	err = core.updateLobby(context, tx, lobby)
-	return err
+	if err := core.updateLobby(context, tx, lobby); err != nil {
+		return err
+	}
+
+	return core.commit(tx, context)
 }
 
 func (core CoreFacade) updateLobby(context *util.Context, tx *transaction, lobby *Lobby) error {
@@ -91,9 +102,14 @@ func (core CoreFacade) updateLobby(context *util.Context, tx *transaction, lobby
 func (core CoreFacade) UpdateLobbyStatus(context *util.Context, lobby *Lobby) error {
 	context.Logger.Debugf("Updating lobby status %+v:", *lobby)
 	tx, err := core.startTransaction()
-	defer core.handleTransaction(tx, context, err)
-	err = core.updateLobbyStatus(context, tx, lobby)
-	return err
+	if err != nil {
+		return err
+	}
+	defer core.rollback(tx)
+	if err = core.updateLobbyStatus(context, tx, lobby); err != nil {
+		return err
+	}
+	return core.commit(tx, context)
 }
 
 func (core CoreFacade) updateLobbyStatus(context *util.Context, tx *transaction, lobby *Lobby) error {
@@ -121,12 +137,14 @@ func (core CoreFacade) updateLobbyStatus(context *util.Context, tx *transaction,
 func (core CoreFacade) DeleteLobby(context *util.Context, lobbyId uuid.UUID, ownerId uuid.UUID) error {
 	context.Logger.Debugf("Deleting lobby: LobbyId [%v], OwnerId [%v]", lobbyId, ownerId)
 	tx, err := core.startTransaction()
-	defer core.handleTransaction(tx, context, err)
 	if err != nil {
-		return fmt.Errorf("something went wrong while creating transaction: %v", err)
+		return err
 	}
-	err = core.deleteLobby(tx, context, lobbyId, ownerId)
-	return err
+	defer core.rollback(tx)
+	if err = core.deleteLobby(tx, context, lobbyId, ownerId); err != nil {
+		return nil
+	}
+	return core.commit(tx, context)
 }
 
 func (core CoreFacade) deleteLobby(tx *transaction, context *util.Context, lobbyId uuid.UUID, ownerId uuid.UUID) error {
@@ -152,10 +170,17 @@ func (core CoreFacade) deleteLobby(tx *transaction, context *util.Context, lobby
 func (core CoreFacade) GetLobby(context *util.Context, lobbyId uuid.UUID) (*Lobby, error) {
 	context.Logger.Debugf("Get lobby: LobbyId [%v]", lobbyId)
 	tx, err := core.startTransaction()
-	defer core.handleTransaction(tx, context, err)
+	if err != nil {
+		return nil, err
+	}
+	defer core.rollback(tx)
 
 	lobby, err := core.getLobby(tx, lobbyId)
-	return lobby, err
+	if err != nil {
+		return nil, err
+	}
+
+	return lobby, core.commit(tx, context)
 }
 
 func (core CoreFacade) getLobby(tx *transaction, lobbyId uuid.UUID) (*Lobby, error) {
@@ -183,7 +208,10 @@ func (core CoreFacade) getLobby(tx *transaction, lobbyId uuid.UUID) (*Lobby, err
 
 func (core CoreFacade) GetLobbies(context *util.Context) ([]*Lobby, error) {
 	tx, err := core.startTransaction()
-	defer core.handleTransaction(tx, context, err)
+	if err != nil {
+		return nil, err
+	}
+	defer core.rollback(tx)
 
 	lobbies, err := tx.dbTx.GetAllLobbies()
 	if err != nil {
@@ -205,7 +233,7 @@ func (core CoreFacade) GetLobbies(context *util.Context) ([]*Lobby, error) {
 		coreLobbies[index] = mapToLobby(lobby, mapToPlayer(owner), mapToPlayers(players))
 	}
 
-	return coreLobbies, nil
+	return coreLobbies, core.commit(tx, context)
 }
 
 func mapToDBLobby(lobby *Lobby) *db.Lobby {

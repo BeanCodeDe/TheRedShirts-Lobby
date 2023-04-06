@@ -101,14 +101,22 @@ func (core CoreFacade) startTransaction() (*transaction, error) {
 	return &transaction{dbTx: tx, messages: make([]*message, 0)}, nil
 }
 
-func (core CoreFacade) handleTransaction(tx *transaction, context *util.Context, err error) {
-	tx.dbTx.HandleTransaction(err)
-	if err == nil {
-		for _, message := range tx.messages {
-			err := core.createMessage(context, message)
-			if err != nil {
-				context.Logger.Warnf("Error while creating message after transaction: %v", err)
-			}
+func (core CoreFacade) commit(tx *transaction, context *util.Context) error {
+	if err := tx.dbTx.Commit(); err != nil {
+		return fmt.Errorf("error while commiting transaction: %v", err)
+	}
+	for _, message := range tx.messages {
+		err := core.createMessage(context, message)
+		if err != nil {
+			context.Logger.Warnf("Error while creating message after transaction: %v", err)
 		}
 	}
+	return nil
+}
+
+func (core CoreFacade) rollback(tx *transaction) error {
+	if err := tx.dbTx.Rollback(); err != nil {
+		return fmt.Errorf("error while rollback transaction: %v", err)
+	}
+	return nil
 }

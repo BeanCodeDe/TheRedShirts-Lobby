@@ -39,7 +39,9 @@ type (
 	}
 
 	DBTx interface {
-		HandleTransaction(err error)
+		//TX
+		Commit() error
+		Rollback() error
 		//Lobby
 		CreateLobby(lobby *Lobby) error
 		UpdateLobby(lobby *Lobby) error
