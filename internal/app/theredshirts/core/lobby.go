@@ -35,6 +35,10 @@ func (core CoreFacade) createLobby(tx *transaction, context *util.Context, lobby
 			return fmt.Errorf("something went wrong while checking if lobby [%v] is already created: %v", lobby.ID, err)
 		}
 
+		if lobby == nil {
+			return fmt.Errorf("lobby not found")
+		}
+
 		if lobby.Name != foundLobby.Name || lobby.Password != foundLobby.Password {
 			return fmt.Errorf("request of lobby [%v] doesn't match lobby from database [%v]", lobby, foundLobby)
 		}
@@ -61,6 +65,10 @@ func (core CoreFacade) UpdateLobby(context *util.Context, lobby *Lobby) error {
 		return fmt.Errorf("something went wrong while loading lobby [%v] from database: %v", lobby.ID, err)
 	}
 
+	if dbLobby == nil {
+		return fmt.Errorf("lobby not found")
+	}
+
 	if dbLobby.Owner != lobby.Owner.ID {
 		return fmt.Errorf("player [%v] is not owner [%v] of the lobby [%v]", lobby.Owner.ID, dbLobby.Owner, lobby.ID)
 	}
@@ -76,6 +84,10 @@ func (core CoreFacade) updateLobby(context *util.Context, tx *transaction, lobby
 	dbLobby, err := tx.dbTx.GetLobbyById(lobby.ID)
 	if err != nil {
 		return fmt.Errorf("something went wrong while loading lobby [%v] from database: %v", lobby.ID, err)
+	}
+
+	if dbLobby == nil {
+		return fmt.Errorf("lobby not found")
 	}
 
 	dbLobby.Name = lobby.Name
@@ -116,6 +128,10 @@ func (core CoreFacade) updateLobbyStatus(context *util.Context, tx *transaction,
 	dbLobby, err := tx.dbTx.GetLobbyById(lobby.ID)
 	if err != nil {
 		return fmt.Errorf("something went wrong while loading lobby [%v] from database: %v", lobby.ID, err)
+	}
+
+	if dbLobby == nil {
+		return fmt.Errorf("lobby not found")
 	}
 
 	if dbLobby.Owner != lobby.Owner.ID {
@@ -190,7 +206,7 @@ func (core CoreFacade) getLobby(tx *transaction, lobbyId uuid.UUID) (*Lobby, err
 	}
 
 	if lobby == nil {
-		return nil, nil
+		return nil, fmt.Errorf("lobby not found")
 	}
 
 	players, err := tx.dbTx.GetAllPlayersInLobby(lobbyId)

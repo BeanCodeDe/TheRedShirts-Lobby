@@ -42,6 +42,10 @@ func (core CoreFacade) createPlayer(context *util.Context, tx *transaction, play
 		return fmt.Errorf("something went wrong while loading lobby %v from database: %v", lobbyId, err)
 	}
 
+	if lobby == nil {
+		return fmt.Errorf("lobby not found")
+	}
+
 	if lobby.Password != password {
 		return ErrWrongLobbyPassword
 	}
@@ -97,6 +101,10 @@ func (core CoreFacade) updatePlayer(context *util.Context, tx *transaction, play
 		lobby, err := tx.dbTx.GetLobbyById(player.LobbyId)
 		if err != nil {
 			return fmt.Errorf("something went wrong while loading lobby %v from database: %v", player.LobbyId, err)
+		}
+
+		if lobby == nil {
+			return fmt.Errorf("lobby not found")
 		}
 
 		if lobby.MaxPlayers <= playerCount {
@@ -165,6 +173,10 @@ func (core CoreFacade) deletePlayer(context *util.Context, tx *transaction, play
 	lobby, err := core.getLobby(tx, player.LobbyId)
 	if err != nil {
 		return err
+	}
+
+	if lobby == nil {
+		return fmt.Errorf("lobby not found")
 	}
 
 	if lobby.Owner.ID == playerId {
