@@ -120,7 +120,12 @@ func (core CoreFacade) updatePlayer(context *util.Context, tx *transaction, play
 	if err := tx.dbTx.UpdatePlayer(foundPlayer); err != nil {
 		return fmt.Errorf("something went wrong while updating player [%v]: %v", player.ID, err)
 	}
-	tx.messages = append(tx.messages, &message{senderPlayerId: foundPlayer.ID, lobbyId: foundPlayer.LobbyId, topic: PLAYER_UPDATED, payload: map[string]interface{}{"player_id": foundPlayer.ID}})
+	tx.messages = append(tx.messages, &message{senderPlayerId: foundPlayer.ID, lobbyId: foundPlayer.LobbyId, topic: PLAYER_UPDATED,
+		payload: map[string]interface{}{
+			"player_id":        foundPlayer.ID,
+			"player_name":      foundPlayer.Name,
+			"player_spectator": foundPlayer.Spectator,
+			"player_payload":   foundPlayer.Payload}})
 	return nil
 }
 
