@@ -68,20 +68,29 @@ func (core CoreFacade) createPlayer(context *util.Context, tx *transaction, play
 	return nil
 }
 
-func (core CoreFacade) UpdatePlayer(context *util.Context, player *Player) error {
+func (core CoreFacade) UpdatePlayer(context *util.Context, player *Player, updatingPlayerId uuid.UUID) error {
 	context.Logger.Debugf("Updating Player: %+v", *player)
 	tx, err := core.startTransaction()
 	if err != nil {
 		return err
 	}
 	defer core.rollback(tx)
-	if err := core.updatePlayer(context, tx, player); err != nil {
+	if err := core.updatePlayer(context, tx, player, updatingPlayerId); err != nil {
 		return err
 	}
 	return core.commit(tx, context)
 }
 
-func (core CoreFacade) updatePlayer(context *util.Context, tx *transaction, player *Player) error {
+func (core CoreFacade) updatePlayer(context *util.Context, tx *transaction, player *Player, updatingPlayerId uuid.UUID) error {
+
+	ownerPlayer, err := tx.dbTx.GetPlayerById(updatingPlayerId)
+	if err != nil {
+		return err
+	}
+
+	if ownerPlayer == nil {
+		return fmt.Errorf("player [%v] not found", updatingPlayerId)
+	}
 
 	foundPlayer, err := tx.dbTx.GetPlayerById(player.ID)
 	if err != nil {
@@ -90,6 +99,21 @@ func (core CoreFacade) updatePlayer(context *util.Context, tx *transaction, play
 
 	if foundPlayer == nil {
 		return fmt.Errorf("player [%v] not found", player.ID)
+	}
+
+	if ownerPlayer.ID != foundPlayer.ID {
+		lobby, err := tx.dbTx.GetLobbyById(ownerPlayer.LobbyId)
+		if err != nil {
+			return fmt.Errorf("something went wrong while loading lobby [%v] from database: %v", ownerPlayer.LobbyId, err)
+		}
+
+		if lobby == nil {
+			return fmt.Errorf("lobby not found")
+		}
+
+		if lobby.Owner != ownerPlayer.ID {
+			return fmt.Errorf("player [%v] is not owner of lobby [%v]", ownerPlayer.ID, lobby.ID)
+		}
 	}
 
 	if foundPlayer.Spectator != player.Spectator && !player.Spectator {
@@ -120,7 +144,7 @@ func (core CoreFacade) updatePlayer(context *util.Context, tx *transaction, play
 	if err := tx.dbTx.UpdatePlayer(foundPlayer); err != nil {
 		return fmt.Errorf("something went wrong while updating player [%v]: %v", player.ID, err)
 	}
-	tx.messages = append(tx.messages, &message{senderPlayerId: foundPlayer.ID, lobbyId: foundPlayer.LobbyId, topic: PLAYER_UPDATED,
+	tx.messages = append(tx.messages, &message{senderPlayerId: updatingPlayerId, lobbyId: foundPlayer.LobbyId, topic: PLAYER_UPDATED,
 		payload: map[string]interface{}{
 			"player_id":        foundPlayer.ID,
 			"player_name":      foundPlayer.Name,

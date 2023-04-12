@@ -101,7 +101,12 @@ func (api *EchoApi) updatePlayer(context echo.Context) error {
 		return echo.ErrBadRequest
 	}
 
-	err = api.core.UpdatePlayer(customContext, mapUpdatePlayerToCorePlayer(updatePlayer))
+	ownerId, err := getOwnerId(context)
+	if err != nil {
+		return echo.ErrBadRequest
+	}
+
+	err = api.core.UpdatePlayer(customContext, mapUpdatePlayerToCorePlayer(updatePlayer), ownerId)
 
 	if err != nil {
 		if errors.Is(err, core.ErrLobbyFull) {

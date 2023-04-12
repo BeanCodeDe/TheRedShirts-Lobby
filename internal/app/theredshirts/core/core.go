@@ -34,7 +34,7 @@ type (
 		DeleteLobby(context *util.Context, lobbyId uuid.UUID, ownerId uuid.UUID) error
 		CreatePlayer(context *util.Context, join *Player, password string) error
 		GetPlayer(context *util.Context, playerId uuid.UUID) (*Player, error)
-		UpdatePlayer(context *util.Context, player *Player) error
+		UpdatePlayer(context *util.Context, player *Player, updatingPlayerId uuid.UUID) error
 		UpdatePlayerLastRefresh(context *util.Context, playerId uuid.UUID) error
 		DeletePlayer(context *util.Context, playerId uuid.UUID) error
 	}
