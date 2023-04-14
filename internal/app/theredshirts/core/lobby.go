@@ -52,7 +52,7 @@ func (core CoreFacade) createLobby(tx *transaction, context *util.Context, lobby
 	return nil
 }
 
-func (core CoreFacade) UpdateLobby(context *util.Context, lobby *Lobby) error {
+func (core CoreFacade) UpdateLobby(context *util.Context, lobby *Lobby, playerId uuid.UUID) error {
 	context.Logger.Debugf("Updating lobby %+v:", *lobby)
 	tx, err := core.startTransaction()
 	if err != nil {
@@ -69,18 +69,18 @@ func (core CoreFacade) UpdateLobby(context *util.Context, lobby *Lobby) error {
 		return fmt.Errorf("lobby not found")
 	}
 
-	if dbLobby.Owner != lobby.Owner.ID {
+	if dbLobby.Owner != playerId {
 		return fmt.Errorf("player [%v] is not owner [%v] of the lobby [%v]", lobby.Owner.ID, dbLobby.Owner, lobby.ID)
 	}
 
-	if err := core.updateLobby(context, tx, lobby); err != nil {
+	if err := core.updateLobby(context, tx, lobby, playerId); err != nil {
 		return err
 	}
 
 	return core.commit(tx, context)
 }
 
-func (core CoreFacade) updateLobby(context *util.Context, tx *transaction, lobby *Lobby) error {
+func (core CoreFacade) updateLobby(context *util.Context, tx *transaction, lobby *Lobby, playerId uuid.UUID) error {
 	dbLobby, err := tx.dbTx.GetLobbyById(lobby.ID)
 	if err != nil {
 		return fmt.Errorf("something went wrong while loading lobby [%v] from database: %v", lobby.ID, err)
@@ -106,25 +106,25 @@ func (core CoreFacade) updateLobby(context *util.Context, tx *transaction, lobby
 			return fmt.Errorf("something went wrong while updating lobby [%v]: %v", lobby.ID, err)
 		}
 	}
-	tx.messages = append(tx.messages, &message{senderPlayerId: lobby.Owner.ID, lobbyId: lobby.ID, topic: PLAYER_UPDATES_LOBBY, payload: map[string]interface{}{}})
+	tx.messages = append(tx.messages, &message{senderPlayerId: playerId, lobbyId: lobby.ID, topic: PLAYER_UPDATES_LOBBY, payload: map[string]interface{}{}})
 
 	return nil
 }
 
-func (core CoreFacade) UpdateLobbyStatus(context *util.Context, lobby *Lobby) error {
+func (core CoreFacade) UpdateLobbyStatus(context *util.Context, lobby *Lobby, playerId uuid.UUID) error {
 	context.Logger.Debugf("Updating lobby status %+v:", *lobby)
 	tx, err := core.startTransaction()
 	if err != nil {
 		return err
 	}
 	defer core.rollback(tx)
-	if err = core.updateLobbyStatus(context, tx, lobby); err != nil {
+	if err = core.updateLobbyStatus(context, tx, lobby, playerId); err != nil {
 		return err
 	}
 	return core.commit(tx, context)
 }
 
-func (core CoreFacade) updateLobbyStatus(context *util.Context, tx *transaction, lobby *Lobby) error {
+func (core CoreFacade) updateLobbyStatus(context *util.Context, tx *transaction, lobby *Lobby, playerId uuid.UUID) error {
 	dbLobby, err := tx.dbTx.GetLobbyById(lobby.ID)
 	if err != nil {
 		return fmt.Errorf("something went wrong while loading lobby [%v] from database: %v", lobby.ID, err)
@@ -134,8 +134,8 @@ func (core CoreFacade) updateLobbyStatus(context *util.Context, tx *transaction,
 		return fmt.Errorf("lobby not found")
 	}
 
-	if dbLobby.Owner != lobby.Owner.ID {
-		return fmt.Errorf("player [%v] is not owner [%v] of the lobby [%v]", lobby.Owner.ID, dbLobby.Owner, lobby.ID)
+	if dbLobby.Owner != playerId {
+		return fmt.Errorf("player [%v] is not owner [%v] of the lobby [%v]", playerId, dbLobby.Owner, lobby.ID)
 	}
 
 	dbLobby.Status = lobby.Status
@@ -146,24 +146,24 @@ func (core CoreFacade) updateLobbyStatus(context *util.Context, tx *transaction,
 		}
 	}
 
-	tx.messages = append(tx.messages, &message{senderPlayerId: lobby.Owner.ID, lobbyId: lobby.ID, topic: PLAYER_UPDATES_LOBBY, payload: map[string]interface{}{}})
+	tx.messages = append(tx.messages, &message{senderPlayerId: playerId, lobbyId: lobby.ID, topic: PLAYER_UPDATES_LOBBY, payload: map[string]interface{}{}})
 	return nil
 }
 
-func (core CoreFacade) DeleteLobby(context *util.Context, lobbyId uuid.UUID, ownerId uuid.UUID) error {
-	context.Logger.Debugf("Deleting lobby: LobbyId [%v], OwnerId [%v]", lobbyId, ownerId)
+func (core CoreFacade) DeleteLobby(context *util.Context, lobbyId uuid.UUID, playerId uuid.UUID) error {
+	context.Logger.Debugf("Deleting lobby: LobbyId [%v], OwnerId [%v]", lobbyId, playerId)
 	tx, err := core.startTransaction()
 	if err != nil {
 		return err
 	}
 	defer core.rollback(tx)
-	if err = core.deleteLobby(tx, context, lobbyId, ownerId); err != nil {
+	if err = core.deleteLobby(tx, context, lobbyId, playerId); err != nil {
 		return nil
 	}
 	return core.commit(tx, context)
 }
 
-func (core CoreFacade) deleteLobby(tx *transaction, context *util.Context, lobbyId uuid.UUID, ownerId uuid.UUID) error {
+func (core CoreFacade) deleteLobby(tx *transaction, context *util.Context, lobbyId uuid.UUID, playerId uuid.UUID) error {
 	lobby, err := tx.dbTx.GetLobbyById(lobbyId)
 	if err != nil {
 		return fmt.Errorf("an error accourd while loading lobby [%v]: %v", lobbyId, err)
@@ -173,8 +173,8 @@ func (core CoreFacade) deleteLobby(tx *transaction, context *util.Context, lobby
 		return nil
 	}
 
-	if lobby.Owner != ownerId {
-		return fmt.Errorf("player [%v] is not owner [%v] of the lobby [%v]", ownerId, lobby.Owner, lobbyId)
+	if lobby.Owner != playerId {
+		return fmt.Errorf("player [%v] is not owner [%v] of the lobby [%v]", playerId, lobby.Owner, lobbyId)
 	}
 
 	if err := tx.dbTx.DeleteLobby(lobbyId); err != nil {

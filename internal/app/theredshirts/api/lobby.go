@@ -118,7 +118,7 @@ func (api *EchoApi) updateLobby(context echo.Context) error {
 	}
 
 	coreLobby := mapLobbyUpdateToCoreLobby(lobby, ownerId)
-	err = api.core.UpdateLobby(customContext, coreLobby)
+	err = api.core.UpdateLobby(customContext, coreLobby, ownerId)
 
 	if err != nil {
 		logger.Warnf("Error while creating lobby: %v", err)
@@ -141,7 +141,7 @@ func (api *EchoApi) updateStatusLobby(context echo.Context) error {
 	}
 
 	coreLobby := mapLobbyUpdateStatusToCoreLobby(lobby, ownerId)
-	err = api.core.UpdateLobbyStatus(customContext, coreLobby)
+	err = api.core.UpdateLobbyStatus(customContext, coreLobby, ownerId)
 
 	if err != nil {
 		logger.Warnf("Error while creating lobby: %v", err)

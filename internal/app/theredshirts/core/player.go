@@ -68,28 +68,28 @@ func (core CoreFacade) createPlayer(context *util.Context, tx *transaction, play
 	return nil
 }
 
-func (core CoreFacade) UpdatePlayer(context *util.Context, player *Player, updatingPlayerId uuid.UUID) error {
+func (core CoreFacade) UpdatePlayer(context *util.Context, player *Player, playerId uuid.UUID) error {
 	context.Logger.Debugf("Updating Player: %+v", *player)
 	tx, err := core.startTransaction()
 	if err != nil {
 		return err
 	}
 	defer core.rollback(tx)
-	if err := core.updatePlayer(context, tx, player, updatingPlayerId); err != nil {
+	if err := core.updatePlayer(context, tx, player, playerId); err != nil {
 		return err
 	}
 	return core.commit(tx, context)
 }
 
-func (core CoreFacade) updatePlayer(context *util.Context, tx *transaction, player *Player, updatingPlayerId uuid.UUID) error {
+func (core CoreFacade) updatePlayer(context *util.Context, tx *transaction, player *Player, playerId uuid.UUID) error {
 
-	ownerPlayer, err := tx.dbTx.GetPlayerById(updatingPlayerId)
+	ownerPlayer, err := tx.dbTx.GetPlayerById(playerId)
 	if err != nil {
 		return err
 	}
 
 	if ownerPlayer == nil {
-		return fmt.Errorf("player [%v] not found", updatingPlayerId)
+		return fmt.Errorf("player [%v] not found", playerId)
 	}
 
 	foundPlayer, err := tx.dbTx.GetPlayerById(player.ID)
@@ -144,7 +144,7 @@ func (core CoreFacade) updatePlayer(context *util.Context, tx *transaction, play
 	if err := tx.dbTx.UpdatePlayer(foundPlayer); err != nil {
 		return fmt.Errorf("something went wrong while updating player [%v]: %v", player.ID, err)
 	}
-	tx.messages = append(tx.messages, &message{senderPlayerId: updatingPlayerId, lobbyId: foundPlayer.LobbyId, topic: PLAYER_UPDATED,
+	tx.messages = append(tx.messages, &message{senderPlayerId: playerId, lobbyId: foundPlayer.LobbyId, topic: PLAYER_UPDATED,
 		payload: map[string]interface{}{
 			"player_id":        foundPlayer.ID,
 			"player_name":      foundPlayer.Name,
@@ -226,9 +226,10 @@ func (core CoreFacade) deletePlayer(context *util.Context, tx *transaction, play
 		} else {
 			context.Logger.Debugf("Player [%s] found to be the new owner of lobby [%s]", foundNewOwner.ID, player.LobbyId)
 			lobby.Owner = foundNewOwner
-			if err := core.updateLobby(context, tx, lobby); err != nil {
+			if err := core.updateLobby(context, tx, lobby, playerId); err != nil {
 				return err
 			}
+			tx.messages = append(tx.messages, &message{senderPlayerId: uuid.Nil, lobbyId: player.LobbyId, topic: PLAYER_LEAVES_LOBBY, payload: map[string]interface{}{"player_id": playerId}})
 		}
 	}
 	if err := tx.dbTx.DeletePlayer(playerId); err != nil {

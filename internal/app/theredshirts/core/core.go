@@ -28,13 +28,13 @@ type (
 	Core interface {
 		CreateLobby(context *util.Context, lobby *Lobby) error
 		GetLobby(context *util.Context, lobbyId uuid.UUID) (*Lobby, error)
-		UpdateLobby(context *util.Context, lobby *Lobby) error
-		UpdateLobbyStatus(context *util.Context, lobby *Lobby) error
+		UpdateLobby(context *util.Context, lobby *Lobby, playerId uuid.UUID) error
+		UpdateLobbyStatus(context *util.Context, lobby *Lobby, playerId uuid.UUID) error
 		GetLobbies(context *util.Context) ([]*Lobby, error)
-		DeleteLobby(context *util.Context, lobbyId uuid.UUID, ownerId uuid.UUID) error
+		DeleteLobby(context *util.Context, lobbyId uuid.UUID, playerId uuid.UUID) error
 		CreatePlayer(context *util.Context, join *Player, password string) error
 		GetPlayer(context *util.Context, playerId uuid.UUID) (*Player, error)
-		UpdatePlayer(context *util.Context, player *Player, updatingPlayerId uuid.UUID) error
+		UpdatePlayer(context *util.Context, player *Player, playerId uuid.UUID) error
 		UpdatePlayerLastRefresh(context *util.Context, playerId uuid.UUID) error
 		DeletePlayer(context *util.Context, playerId uuid.UUID) error
 	}
