@@ -81,6 +81,7 @@ func initLobbyInterface(group *echo.Group, api *EchoApi) {
 func (api *EchoApi) createLobbyId(context echo.Context) error {
 	logger := context.Get(context_key).(*util.Context).Logger
 	logger.Debug("Create lobby Id")
+
 	return context.String(http.StatusCreated, uuid.NewString())
 }
 

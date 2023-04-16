@@ -101,6 +101,7 @@ func (adapter *MessageAdapter) sendCreateMessage(context *util.Context, message 
 	}
 
 	req.Header.Set(correlation_id, context.CorrelationId)
+	req.Header.Set("uber-trace-id", context.CorrelationId)
 	req.Header.Set(header_player_id, playerId.String())
 	req.Header.Set(content_typ, content_typ_value)
 	resp, err := client.Do(req)
